@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>さむさむ's Homepage - Welcome!</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans JP, Share Tech Mono, Outfit) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Share+Tech+Mono&family=Outfit:wght@800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        railNavy: '#0f172a',
+                        railBlue: '#0284c7',
+                        railGreen: '#10b981',
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                        mono: ['"Share Tech Mono"', 'monospace'],
+                        display: ['"Outfit"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Glassmorphism Navigation */
+        .glass-nav {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        /* Video Container Aspect Ratio */
+        .video-aspect {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+        .video-aspect iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Accordion transition for drawer tools */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .accordion-content.open {
+            max-height: 800px;
+        }
+        
+        .chevron-icon {
+            transition: transform 0.3s ease;
+        }
+        .chevron-icon.rotate {
+            transform: rotate(180deg);
+        }
+
+        /* Hide Scrollbar for clean drawer */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-sky-500 selection:text-white">
+
+    <!-- Header Navbar -->
+    <header class="sticky top-0 z-40 glass-nav border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Site Logo / Title with User Avatar -->
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl overflow-hidden ring-2 ring-sky-500/50 shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform duration-300 shrink-0 bg-slate-800">
+                    <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/8b042b15382bc0d6a22724c61bdeeab1/PXL_20260304_031922959.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPzfWDIwwPeoSG4RxyfMpWjTzuhU2xnApBR_GtO8agmnCIvnney71OFz0FEwilQOF0-asXg2G0WKu2p2fpWWMHyx_PpWvloc0YDilLIgvJbuMfCmi7HcCWxgb7rD_8EhoWwUYEjAeUlwU0EvELvEPX7Q==" 
+                         alt="さむさむ アイコン" 
+                         class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                        さむさむ's Homepage
+                    </span>
+                    <span class="block text-xs text-sky-400 font-mono">- Samsam Official -</span>
+                </div>
+            </a>
+
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+                <a href="#about" class="hover:text-sky-400 transition-colors py-1"><i class="fa-solid fa-user mr-1.5 text-xs"></i>About</a>
+                <a href="#youtube" class="hover:text-sky-400 transition-colors py-1"><i class="fa-brands fa-youtube mr-1.5 text-xs text-red-500"></i>Videos</a>
+                <a href="#gallery" class="hover:text-sky-400 transition-colors py-1"><i class="fa-solid fa-camera mr-1.5 text-xs"></i>Gallery</a>
+                <a href="#notice" class="hover:text-sky-400 transition-colors py-1"><i class="fa-solid fa-shield-halved mr-1.5 text-xs"></i>Notice</a>
+            </nav>
+
+            <!-- Hamburger Button & Top X Link Button -->
+            <div class="flex items-center gap-3">
+                <a href="https://x.com/SamsamMariris" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors shadow-sm hover:border-slate-600" title="X (旧Twitter) を見る">
+                    <svg class="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span>@SamsamMariris</span>
+                </a>
+
+                <button id="menu-btn" type="button" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 focus:outline-none transition-colors flex items-center gap-2 border border-slate-700/60" aria-label="Toggle Menu">
+                    <i class="fa-solid fa-bars text-lg" id="menu-icon"></i>
+                    <span class="text-xs font-semibold pr-1">MENU</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Slide-out Hamburger Menu Drawer -->
+    <div id="drawer-backdrop" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    
+    <aside id="drawer" class="fixed top-0 right-0 w-80 max-w-[85vw] h-full bg-slate-900 border-l border-slate-800 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
+        <!-- Drawer Header -->
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/8b042b15382bc0d6a22724c61bdeeab1/PXL_20260304_031922959.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPzfWDIwwPeoSG4RxyfMpWjTzuhU2xnApBR_GtO8agmnCIvnney71OFz0FEwilQOF0-asXg2G0WKu2p2fpWWMHyx_PpWvloc0YDilLIgvJbuMfCmi7HcCWxgb7rD_8EhoWwUYEjAeUlwU0EvELvEPX7Q==" 
+                     alt="アイコン" class="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/40">
+                <span class="font-bold text-slate-100">サイトメニュー</span>
+            </div>
+            <button id="drawer-close-btn" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Drawer Body Links -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
+            <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Main Navigation</p>
+                <ul class="space-y-1">
+                    <li>
+                        <a href="#about" class="drawer-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-sky-400 transition-all">
+                            <i class="fa-solid fa-user-circle w-5 text-sky-400"></i>
+                            <span>プロフィール & 概要</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#youtube" class="drawer-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-sky-400 transition-all">
+                            <i class="fa-brands fa-youtube w-5 text-red-500"></i>
+                            <span>おすすめ動画</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#gallery" class="drawer-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-sky-400 transition-all">
+                            <i class="fa-solid fa-images w-5 text-emerald-400"></i>
+                            <span>鉄道・風景ギャラリー</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#notice" class="drawer-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-slate-800 hover:text-sky-400 transition-all">
+                            <i class="fa-solid fa-circle-info w-5 text-amber-400"></i>
+                            <span>ご利用・画像転載について</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Accordion Tools Section in Drawer -->
+            <div class="pt-4 border-t border-slate-800">
+                <button id="tools-accordion-toggle" class="w-full flex items-center justify-between p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 text-slate-200 border border-slate-700/50 transition-all group">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-toolbox text-sky-400 group-hover:scale-110 transition-transform"></i>
+                        <span class="font-bold text-sm">便利ツール</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 chevron-icon" id="tools-chevron"></i>
+                </button>
+
+                <!-- Accordion Content (10 Tool Pages Links) -->
+                <div id="tools-accordion-content" class="accordion-content mt-2 pl-2">
+                    <ul class="space-y-1 text-xs border-l-2 border-sky-500/30 pl-3">
+                        <li>
+                            <a href="char-count.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-font text-sky-400 w-4 text-center"></i>
+                                <span>文字数カウント</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="station-gacha.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-dice text-amber-400 w-4 text-center"></i>
+                                <span>首都圏 ぶらり途中下車駅ガチャ</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="earthquake.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-house-chimney-crack text-red-400 w-4 text-center"></i>
+                                <span>リアルタイム地震情報</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="omikuji.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-scroll text-rose-400 w-4 text-center"></i>
+                                <span>おみくじ</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="timer.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-stopwatch text-emerald-400 w-4 text-center"></i>
+                                <span>タイマー・ストップウォッチ</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="radix.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-calculator text-indigo-400 w-4 text-center"></i>
+                                <span>進数変換</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="markdown.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-brands fa-markdown text-purple-400 w-4 text-center"></i>
+                                <span>Markdownリアルタイムエディタ</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="qrcode.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-qrcode text-teal-400 w-4 text-center"></i>
+                                <span>QRコード作成・読み取り器</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="time-bar.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-hourglass-half text-orange-400 w-4 text-center"></i>
+                                <span>残り時間バー</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="password.html" class="flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-slate-300 hover:text-sky-300 hover:bg-slate-800/80 transition-all">
+                                <i class="fa-solid fa-key text-yellow-400 w-4 text-center"></i>
+                                <span>パスワード生成</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950/50 text-center">
+            <p class="text-xs text-slate-500">さむさむ Official Website</p>
+        </div>
+    </aside>
+
+    <main class="flex-1">
+        <!-- Hero Section -->
+        <section class="relative overflow-hidden pt-16 pb-20 lg:pt-24 lg:pb-28 border-b border-slate-800">
+            <!-- Background glow -->
+            <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-sky-500/15 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute top-1/2 right-10 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="max-w-3xl mx-auto text-center">
+                    
+                    <h1 class="font-display font-black tracking-tight text-white mb-6 leading-none text-5xl sm:text-7xl lg:text-8xl drop-shadow-lg">
+                        <span class="bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">
+                            Welcome！
+                        </span>
+                    </h1>
+
+                    <p class="text-base sm:text-xl text-slate-300 mb-8 leading-relaxed font-light">
+                        見に来てくれてありがとうございます！さむさむのホームページです。ぜひいろいろ見ていってください！
+                    </p>
+
+                    <!-- Links & CTA Buttons with User's Official Social Links -->
+                    <div class="flex flex-wrap items-center justify-center gap-4">
+                        <a href="https://www.youtube.com/@samsam-marir" target="_blank" rel="noopener noreferrer" class="px-6 py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium shadow-lg shadow-red-600/25 flex items-center gap-2.5 transition-all hover:-translate-y-0.5">
+                            <i class="fa-brands fa-youtube text-xl"></i>
+                            <span>YouTube チャンネルを見る</span>
+                        </a>
+                        <a href="https://x.com/SamsamMariris" target="_blank" rel="noopener noreferrer" class="px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium border border-slate-700 flex items-center gap-2.5 transition-all hover:-translate-y-0.5">
+                            <svg class="w-5 h-5 fill-current text-white shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                            <span>X (旧Twitter)</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section (Redesigned Profile Dashboard Style) -->
+        <section id="about" class="py-16 sm:py-24 border-b border-slate-800/80 bg-slate-900/30">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-14">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white mb-3 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-address-card text-sky-400"></i> Profile & Stance
+                    </h2>
+                    <p class="text-slate-400 text-sm">当サイトの運営者・活動スタイルについて</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+                    <!-- Left: Profile Card with User Avatar -->
+                    <div class="lg:col-span-5 bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden">
+                        <div class="absolute -right-8 -top-8 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl"></div>
+                        
+                        <div>
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-sky-500/50 shadow-lg shadow-sky-500/20 shrink-0 bg-slate-800">
+                                    <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/8b042b15382bc0d6a22724c61bdeeab1/PXL_20260304_031922959.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPzfWDIwwPeoSG4RxyfMpWjTzuhU2xnApBR_GtO8agmnCIvnney71OFz0FEwilQOF0-asXg2G0WKu2p2fpWWMHyx_PpWvloc0YDilLIgvJbuMfCmi7HcCWxgb7rD_8EhoWwUYEjAeUlwU0EvELvEPX7Q==" 
+                                         alt="さむさむ プロフィール画像" class="w-full h-full object-cover">
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-white">さむさむ</h3>
+                                    <p class="text-xs text-sky-400 font-mono">@SamsamMariris</p>
+                                </div>
+                            </div>
+
+                            <p class="text-slate-300 text-sm leading-relaxed mb-6">
+                                首都圏（山梨・東京・神奈川・埼玉）の路線を中心に、鉄道の映像・写真を趣味で撮影しています！中央線沿線や首都圏路線（特にJR東日本線）が好きです。
+                            </p>
+                        </div>
+
+                        <!-- Info Badges -->
+                        <div class="space-y-2.5 pt-4 border-t border-slate-800/80 text-xs text-slate-400">
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-map-pin text-rose-400"></i> 主な撮影エリア</span>
+                                <span class="text-slate-200 font-medium">山梨・東京・神奈川・埼玉</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-camera text-sky-400"></i> 主な投稿内容</span>
+                                <span class="text-slate-200 font-medium">鉄道映像・写真・日常の風景</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-clock text-emerald-400"></i> 更新ペース</span>
+                                <span class="text-slate-200 font-medium">完全不定期（マイペース）</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Activity Highlights Grid -->
+                    <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-5 hover:border-slate-700 transition-colors flex flex-col justify-between">
+                            <div>
+                                <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center text-lg mb-3">
+                                    <i class="fa-solid fa-video"></i>
+                                </div>
+                                <h4 class="text-white font-bold text-base mb-1">映像・写真のこだわり</h4>
+                                <p class="text-slate-400 text-xs leading-relaxed">
+                                    列車の走行音や綺麗な風景を大事にしながらまったり撮影しています。レアな車両などに遭遇したらその映像などを撮影しています！
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-5 hover:border-slate-700 transition-colors flex flex-col justify-between">
+                            <div>
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg mb-3">
+                                    <i class="fa-solid fa-mug-hot"></i>
+                                </div>
+                                <h4 class="text-white font-bold text-base mb-1">気まぐれ・趣味運営</h4>
+                                <p class="text-slate-400 text-xs leading-relaxed">
+                                    YouTubeなどは全く収益化してないです！完全個人運営です。気になった時にふらっと動画や写真をアップしています。
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-5 hover:border-slate-700 transition-colors flex flex-col justify-between sm:col-span-2">
+                            <div class="flex flex-col sm:flex-row sm:items-start gap-4">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg shrink-0">
+                                    <i class="fa-solid fa-camera-retro"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-bold text-base mb-1">鉄道以外のコンテンツも</h4>
+                                    <p class="text-slate-400 text-xs leading-relaxed">
+                                        鉄道だけでなく、綺麗な風景を撮影してそれを投稿したりなどもしています！
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- YouTube Videos Section (API dynamic fetch container) -->
+        <section id="youtube" class="py-16 border-b border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-brands fa-youtube text-red-500"></i> おすすめ動画
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- Embed Notice -->
+                <div class="mb-6 p-3 rounded-xl bg-sky-950/40 border border-sky-800/50 text-sky-300 text-xs flex items-center gap-2.5">
+                    <i class="fa-solid fa-circle-info text-sky-400 text-sm"></i>
+                    <span>※ 動画が再生できない場合は、各カード下部のリンクからYouTubeにて直接ご視聴いただけます。</span>
+                </div>
+
+                <!-- Dynamic YouTube Grid Container (Populated via YouTube Data API) -->
+                <div id="youtube-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Skeleton Loader State -->
+                    <div class="animate-pulse bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-64"></div>
+                    <div class="animate-pulse bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-64"></div>
+                    <div class="animate-pulse bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-64"></div>
+                    <div class="animate-pulse bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-64"></div>
+                </div>
+
+                <!-- Social Access Buttons linked directly to user's channels -->
+                <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+                    <a href="https://www.youtube.com/@samsam-marir" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-sm shadow-lg shadow-red-600/20 transition-all hover:-translate-y-0.5">
+                        <i class="fa-brands fa-youtube text-lg"></i>
+                        <span>YouTube チャンネルを見に行く</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                    <a href="https://x.com/SamsamMariris" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm border border-slate-700 shadow-lg transition-all hover:-translate-y-0.5">
+                        <svg class="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        <span>X (旧Twitter) を見る</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Photo Gallery Section -->
+        <section id="gallery" class="py-16 border-b border-slate-800 bg-slate-900/20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-2xl mx-auto mb-12">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white mb-3 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-images text-emerald-400"></i> Photo Gallery
+                    </h2>
+                    <p class="text-slate-400 text-sm">沿線で撮影した写真ピックアップ（クリックで拡大表示）</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+                    <!-- Photo 1 -->
+                    <div class="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer gallery-card"
+                         data-title="大井町トラックスから見る夜の山手線車庫" 
+                         data-location="東京都 品川区（大井町トラックス）" 
+                         data-img="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/b2acc48ed231059e79dfabffc0121350/PXL_20260807_105549324.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPzoyEF_Gc__N44buTmyVgWhbKiFtmiUQmnu9fwfY-pVgEbEa_kc4WHeA6WjpD_KntcyK1nYxdvmT_nJNfDesbf-73HtlCPvqMORGjVLOrGldokA2h7MgKzQGkdTNAwXv77E2XL2oL92GDIcO8UWbUKw==">
+                        <div class="aspect-[4/3] overflow-hidden bg-slate-800 relative">
+                            <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/b2acc48ed231059e79dfabffc0121350/PXL_20260807_105549324.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPzoyEF_Gc__N44buTmyVgWhbKiFtmiUQmnu9fwfY-pVgEbEa_kc4WHeA6WjpD_KntcyK1nYxdvmT_nJNfDesbf-73HtlCPvqMORGjVLOrGldokA2h7MgKzQGkdTNAwXv77E2XL2oL92GDIcO8UWbUKw==" 
+                                 alt="大井町トラックスから見る夜の山手線車庫" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                 loading="lazy">
+                        </div>
+                        <div class="p-4 bg-slate-900">
+                            <div class="text-xs text-sky-400 font-medium mb-1"><i class="fa-solid fa-location-dot mr-1"></i>東京都 品川区</div>
+                            <h3 class="font-bold text-white text-base">大井町トラックスから見る夜の山手線車庫</h3>
+                        </div>
+                    </div>
+
+                    <!-- Photo 2 -->
+                    <div class="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer gallery-card"
+                         data-title="スカ色211系とE233系のツーショット" 
+                         data-location="山梨県 大月駅" 
+                         data-img="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/7e31f562b612bcbe08f4a08071782b22/PXL_20260711_044243965.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPct3ovXfQZZE4dq3E0MWbzWj4CgyCuaBTLk42qquhRSxEbHdKIdOTNBIKkwSxmPEIyCbEn36azSH-A0oGo0EX8j3kR1P5YKXLMwG9dvZmJOotfF-EuDuHYkFPy-ZgfSm9SzuWZBWN0xUTmURvGQNNtQ==">
+                        <div class="aspect-[4/3] overflow-hidden bg-slate-800 relative">
+                            <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/7e31f562b612bcbe08f4a08071782b22/PXL_20260711_044243965.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPct3ovXfQZZE4dq3E0MWbzWj4CgyCuaBTLk42qquhRSxEbHdKIdOTNBIKkwSxmPEIyCbEn36azSH-A0oGo0EX8j3kR1P5YKXLMwG9dvZmJOotfF-EuDuHYkFPy-ZgfSm9SzuWZBWN0xUTmURvGQNNtQ==" 
+                                 alt="スカ色211系とE233系のツーショット" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                 loading="lazy">
+                        </div>
+                        <div class="p-4 bg-slate-900">
+                            <div class="text-xs text-sky-400 font-medium mb-1"><i class="fa-solid fa-location-dot mr-1"></i>山梨県 大月駅</div>
+                            <h3 class="font-bold text-white text-base">スカ色211系とE233系のツーショット</h3>
+                        </div>
+                    </div>
+
+                    <!-- Photo 3 -->
+                    <div class="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer gallery-card"
+                         data-title="電光掲示板の貨物列車表示" 
+                         data-location="山梨県 甲府駅" 
+                         data-img="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/98bc026d77d9a68582837875e27a544c/PXL_20260706_072518484_MP.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPAlGDKG3Mfb-CLFa3WjDb09dB0SogwKgxyHg5fz8TzowutR28rSF1AaFn8fmGnxtY0rDg0zlFeXw1qx3TzgrzKwLTnEkH3ZPvhrM6W92dydExeHS7hzeLAT0i5iYEIGcVkx5UFZmzpPyN3um7koeFOA==">
+                        <div class="aspect-[4/3] overflow-hidden bg-slate-800 relative">
+                            <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/98bc026d77d9a68582837875e27a544c/PXL_20260706_072518484_MP.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPAlGDKG3Mfb-CLFa3WjDb09dB0SogwKgxyHg5fz8TzowutR28rSF1AaFn8fmGnxtY0rDg0zlFeXw1qx3TzgrzKwLTnEkH3ZPvhrM6W92dydExeHS7hzeLAT0i5iYEIGcVkx5UFZmzpPyN3um7koeFOA==" 
+                                 alt="電光掲示板の貨物列車表示" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                 loading="lazy">
+                        </div>
+                        <div class="p-4 bg-slate-900">
+                            <div class="text-xs text-sky-400 font-medium mb-1"><i class="fa-solid fa-location-dot mr-1"></i>山梨県 甲府駅</div>
+                            <h3 class="font-bold text-white text-base">電光掲示板の貨物列車表示</h3>
+                        </div>
+                    </div>
+
+                    <!-- Photo 4 -->
+                    <div class="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg cursor-pointer gallery-card"
+                         data-title="E131系とE353系のツーショット" 
+                         data-location="山梨県 甲斐大和駅" 
+                         data-img="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/826257a4f1e7b0321c5bab5a8d1b0fd1/PXL_20260824_054632368.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPE6si0CjWUSSMQw0r9ckiefKr1Bmxwj2vkKzkgCByhRLJ5mFt6S_OwBpdab5IMdlLd5nvHxqbSRnxsWAZY93d1hIFZUbynDe-VnUXvHpT2wgqPWqJAtHagTXkDBq9TA8MA6tJl6TdQF-2kzthOS1-PA==">
+                        <div class="aspect-[4/3] overflow-hidden bg-slate-800 relative">
+                            <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/826257a4f1e7b0321c5bab5a8d1b0fd1/PXL_20260824_054632368.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPE6si0CjWUSSMQw0r9ckiefKr1Bmxwj2vkKzkgCByhRLJ5mFt6S_OwBpdab5IMdlLd5nvHxqbSRnxsWAZY93d1hIFZUbynDe-VnUXvHpT2wgqPWqJAtHagTXkDBq9TA8MA6tJl6TdQF-2kzthOS1-PA==" 
+                                 alt="E131系とE353系のツーショット" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                 loading="lazy">
+                        </div>
+                        <div class="p-4 bg-slate-900">
+                            <div class="text-xs text-sky-400 font-medium mb-1"><i class="fa-solid fa-location-dot mr-1"></i>山梨県 甲斐大和駅</div>
+                            <h3 class="font-bold text-white text-base">E131系とE353系のツーショット</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Notice Section -->
+        <section id="notice" class="py-16 border-b border-slate-800 bg-slate-900/40">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 relative shadow-xl">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-white">画像・コンテンツの転載について</h2>
+                    </div>
+
+                    <div class="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        <div class="p-5 rounded-2xl bg-slate-950 border border-slate-800/80">
+                            <h3 class="font-bold text-white mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-comments text-sky-400"></i> 無断転載はお控えください（ご一報で許可いたします！）
+                            </h3>
+                            <p class="text-slate-300 leading-relaxed">
+                                当サイトやYouTube、Xに掲載している写真・動画素材の<strong class="text-amber-300 font-medium">無断転載・無断使用はご遠慮いただいております</strong>。
+                            </p>
+                            <p class="text-slate-400 mt-2 leading-relaxed">
+                                ただし、<span class="text-sky-300 font-semibold">「使いたい」旨をコメント欄やSNSで一言声をかけていただければ基本的に使用許可を出します！</span>
+                                使用されたい方は、お気軽に各コメント等で教えてください。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+            <div class="flex items-center justify-center gap-3">
+                <div class="w-8 h-8 rounded-lg overflow-hidden ring-1 ring-sky-500/50 shadow-md shrink-0 bg-slate-800">
+                    <img src="https://u1.padletusercontent.com/uploads/padlet-uploads-usc1/3580687132/8b042b15382bc0d6a22724c61bdeeab1/PXL_20260304_031922959.jpg?token=qLd84XfefkiY6TQpucruMLGaqtqh7DmKCBBf2-2x1PHOa4TCxWwTRfDzQCyX0_7kNgo_3XiMUmkdfeAREU2_L7tV8UkN7JSqwUZFMBQnk6jVu0F-2K47sbimPY4OxvnPzfWDIwwPeoSG4RxyfMpWjTzuhU2xnApBR_GtO8agmnCIvnney71OFz0FEwilQOF0-asXg2G0WKu2p2fpWWMHyx_PpWvloc0YDilLIgvJbuMfCmi7HcCWxgb7rD_8EhoWwUYEjAeUlwU0EvELvEPX7Q==" 
+                         alt="さむさむ" class="w-full h-full object-cover">
+                </div>
+                <span class="font-bold text-white tracking-tight">さむさむ's Homepage</span>
+            </div>
+
+            <div class="flex items-center justify-center gap-4 text-lg text-slate-400">
+                <a href="https://www.youtube.com/@samsam-marir" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-red-500 hover:border-red-500/50 transition-all shadow-sm" aria-label="YouTube チャンネル">
+                    <i class="fa-brands fa-youtube"></i>
+                </a>
+                <a href="https://x.com/SamsamMariris" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-300 hover:text-sky-400 hover:border-sky-500/50 transition-all shadow-sm group" aria-label="X (旧Twitter) アカウント">
+                    <svg class="w-4 h-4 fill-current text-slate-300 group-hover:text-sky-400 transition-colors" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                </a>
+            </div>
+
+            <p class="text-xs text-slate-500">
+                &copy; 2026 さむさむ All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Image Lightbox Modal -->
+    <div id="image-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 opacity-0 pointer-events-none transition-opacity duration-300 flex items-center justify-center p-4">
+        <div class="max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl relative">
+            <button id="modal-close-btn" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-950/80 text-white flex items-center justify-center hover:bg-slate-800 transition-colors z-10">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="aspect-[16/9] bg-black overflow-hidden flex items-center justify-center">
+                <img id="modal-img" src="" alt="拡大画像" class="max-h-full max-w-full object-contain">
+            </div>
+            <div class="p-6 bg-slate-900">
+                <div id="modal-location" class="text-xs text-sky-400 font-medium mb-1"></div>
+                <h3 id="modal-title" class="text-xl font-bold text-white"></h3>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Drawer Menu Elements
+        const menuBtn = document.getElementById('menu-btn');
+        const drawer = document.getElementById('drawer');
+        const drawerBackdrop = document.getElementById('drawer-backdrop');
+        const drawerCloseBtn = document.getElementById('drawer-close-btn');
+        const drawerLinks = document.querySelectorAll('.drawer-link');
+
+        function openDrawer() {
+            drawer.classList.remove('translate-x-full');
+            drawerBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDrawer() {
+            drawer.classList.add('translate-x-full');
+            drawerBackdrop.classList.add('opacity-0', 'pointer-events-none');
+            document.body.style.overflow = '';
+        }
+
+        menuBtn.addEventListener('click', openDrawer);
+        drawerCloseBtn.addEventListener('click', closeDrawer);
+        drawerBackdrop.addEventListener('click', closeDrawer);
+
+        drawerLinks.forEach(link => {
+            link.addEventListener('click', closeDrawer);
+        });
+
+        // Tools Accordion Toggle Logic
+        const accordionToggle = document.getElementById('tools-accordion-toggle');
+        const accordionContent = document.getElementById('tools-accordion-content');
+        const toolsChevron = document.getElementById('tools-chevron');
+
+        accordionToggle.addEventListener('click', () => {
+            const isOpen = accordionContent.classList.contains('open');
+            if (isOpen) {
+                accordionContent.classList.remove('open');
+                toolsChevron.classList.remove('rotate');
+            } else {
+                accordionContent.classList.add('open');
+                toolsChevron.classList.add('rotate');
+            }
+        });
+
+        // Photo Gallery Lightbox Modal Logic
+        const modal = document.getElementById('image-modal');
+        const modalImg = document.getElementById('modal-img');
+        const modalTitle = document.getElementById('modal-title');
+        const modalLocation = document.getElementById('modal-location');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const galleryCards = document.querySelectorAll('.gallery-card');
+
+        galleryCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const title = card.getAttribute('data-title');
+                const loc = card.getAttribute('data-location');
+                const img = card.getAttribute('data-img');
+
+                modalImg.src = img;
+                modalTitle.innerText = title;
+                modalLocation.innerText = loc;
+
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                document.body.style.overflow = 'hidden';
+            });
+        });
+
+        function closeModal() {
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            document.body.style.overflow = '';
+        }
+
+        modalCloseBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // YouTube Data API v3 Dynamic Fetch Logic
+        const API_KEY = 'AIzaSyCH6-bukOQ_8CmTTCfERQHJN2-rTNoRB9M';
+        const PLAYLIST_ID = 'PLHmJdMwhtWOI';
+        const MAX_RESULTS = 4;
+
+        async function fetchYouTubePlaylistVideos() {
+            const gridContainer = document.getElementById('youtube-grid');
+            if (!gridContainer) return;
+
+            const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${PLAYLIST_ID}&maxResults=${MAX_RESULTS}&key=${API_KEY}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    gridContainer.innerHTML = ''; // Clear loading skeletons
+
+                    data.items.forEach(item => {
+                        const snippet = item.snippet;
+                        const videoId = snippet.resourceId ? snippet.resourceId.videoId : '';
+                        const title = snippet.title || 'YouTube 動画';
+
+                        if (!videoId) return;
+
+                        const cardHTML = `
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg flex flex-col hover:border-slate-700 transition-all">
+                                <div class="video-aspect bg-slate-950">
+                                    <iframe 
+                                        src="https://www.youtube.com/embed/${videoId}" 
+                                        title="${title.replace(/"/g, '&quot;')}"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                                        referrerpolicy="strict-origin-when-cross-origin"
+                                        allowfullscreen>
+                                    </iframe>
+                                </div>
+                                <div class="p-4 flex-1 flex flex-col justify-between">
+                                    <h3 class="font-bold text-white text-sm line-clamp-2 leading-snug mb-3">${title}</h3>
+                                    <a href="https://www.youtube.com/watch?v=${videoId}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-[11px] text-sky-400 font-mono hover:underline mt-auto">
+                                        <i class="fa-brands fa-youtube mr-1.5 text-red-500 text-sm"></i>YouTubeで見る <i class="fa-solid fa-arrow-up-right-from-square text-[9px] ml-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        gridContainer.insertAdjacentHTML('beforeend', cardHTML);
+                    });
+                } else {
+                    renderYouTubeFallback(gridContainer);
+                }
+            } catch (error) {
+                console.error('YouTube API Fetch Error:', error);
+                renderYouTubeFallback(gridContainer);
+            }
+        }
+
+        // Fallback UI in case of API limits or origin security restrictions
+        function renderYouTubeFallback(container) {
+            container.innerHTML = `
+                <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center">
+                    <i class="fa-brands fa-youtube text-red-500 text-4xl mb-3"></i>
+                    <p class="text-white font-bold text-base mb-2">YouTube動画の読み込み</p>
+                    <p class="text-slate-400 text-xs mb-4">動画リストを直接YouTubeでご覧いただけます。</p>
+                    <a href="https://www.youtube.com/@samsam-marir" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium text-xs transition-colors">
+                        <span>チャンネルで動画をチェックする</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                </div>
+            `;
+        }
+
+        // Initialize fetch on page load
+        document.addEventListener('DOMContentLoaded', fetchYouTubePlaylistVideos);
+    </script>
+</body>
+</html>

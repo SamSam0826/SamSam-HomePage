@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>n進数相互変換ツール - さむさむ Official Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'Noto Sans JP', 'sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .glass-card { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    
+    /* 折りたたみアニメーション用CSS */
+    .accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .accordion-content.open {
+      max-height: 600px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-white relative overflow-x-hidden">
+
+  <!-- Top Right Hamburger Menu Button (Always Visible) -->
+  <header class="fixed top-0 right-0 z-40 p-4">
+    <button id="menu-open-btn" onclick="openMenu()" class="bg-slate-800/90 hover:bg-slate-700/90 text-slate-100 font-bold px-4 py-2.5 rounded-2xl flex items-center gap-2 border border-slate-700/80 shadow-xl backdrop-blur-md transition-all duration-200 active:scale-95 group">
+      <svg class="w-5 h-5 text-sky-400 group-hover:rotate-12 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+      <span class="text-sm tracking-wide">MENU</span>
+    </button>
+  </header>
+
+  <!-- Menu Backdrop Overlay -->
+  <div id="menu-backdrop" onclick="closeMenu()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+  <!-- Drawer Menu Content -->
+  <div id="drawer-menu" class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-slate-900/95 border-l border-slate-800/80 z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col justify-between shadow-2xl backdrop-blur-xl">
+    
+    <!-- Drawer Header -->
+    <div class="flex items-center justify-between p-4 md:p-5 border-b border-slate-800/80">
+      <div class="flex items-center gap-2.5 text-slate-100 font-bold">
+        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        <span class="text-lg">メニュー</span>
+      </div>
+      <button onclick="closeMenu()" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Body Navigation Links -->
+    <div class="p-4 space-y-3 flex-1 overflow-y-auto">
+      
+      <!-- Homepage Link -->
+      <a href="index.html" class="bg-slate-800/70 hover:bg-slate-800 text-slate-100 p-3.5 rounded-2xl flex items-center gap-3 border border-slate-700/60 transition shadow-sm font-semibold text-sm group">
+        <div class="p-2 bg-sky-500/10 rounded-xl group-hover:bg-sky-500/20 text-sky-400 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+        </div>
+        <span>ホームページへ</span>
+      </a>
+
+      <!-- Collapsible Useful Tools Accordion -->
+      <div class="border border-slate-800 rounded-2xl bg-slate-900/40 overflow-hidden">
+        <button id="tools-toggle-btn" onclick="toggleToolsAccordion()" class="w-full bg-slate-800/70 hover:bg-slate-800 text-slate-100 p-3.5 flex items-center justify-between border-b border-transparent transition font-semibold text-sm group">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 text-emerald-400 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+              </svg>
+            </div>
+            <span>便利ツール</span>
+          </div>
+          <svg id="accordion-arrow" class="w-4 h-4 text-slate-400 transition-transform duration-300 transform rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Accordion Items List (Excluding current radix.html page) -->
+        <div id="tools-accordion" class="accordion-content bg-slate-950/40 divide-y divide-slate-800/50">
+          <a href="char-count.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            文字数カウント
+          </a>
+          <a href="station-gacha.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            首都圏 ぶらり途中下車駅ガチャ
+          </a>
+          <a href="earthquake.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            リアルタイム地震情報
+          </a>
+          <a href="omikuji.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            おみくじ
+          </a>
+          <a href="timer.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            タイマー・ストップウォッチ
+          </a>
+          <!-- 「進数変換」はこのページのため除外しています -->
+          <a href="markdown.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            Markdownリアルタイムエディタ
+          </a>
+          <a href="qrcode.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            QRコード作成・読み取り器
+          </a>
+          <a href="time-bar.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            残り時間バー
+          </a>
+          <a href="password.html" class="block py-2.5 px-4 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition pl-12">
+            パスワード生成
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-slate-800/80 text-center bg-slate-950/60">
+      <span class="text-sm font-bold text-slate-200 tracking-wide">さむさむ Official Website</span>
+    </div>
+
+  </div>
+
+  <!-- Main Content Area -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 pt-16 md:pt-20 flex-grow">
+    <section class="space-y-6">
+      <div class="glass-card rounded-3xl p-6 md:p-8 border border-slate-800 shadow-2xl">
+        <div class="max-w-xl mx-auto text-center mb-6">
+          <h2 class="text-2xl md:text-3xl font-extrabold text-slate-100 flex items-center justify-center gap-2">
+            <span>n進数相互変換ツール</span>
+          </h2>
+          <p class="text-slate-400 text-sm mt-1.5">2進数・8進数・10進数・16進数を相互変換＆厳密な文字入力バリデーション</p>
+        </div>
+
+        <div class="max-w-3xl mx-auto space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">変換前の進数 (Input Base)</label>
+              <select id="radix-in-base" onchange="convertRadix()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 font-semibold focus:outline-none focus:border-sky-500 cursor-pointer">
+                <option value="10" selected>10進数 (Decimal)</option>
+                <option value="2">2進数 (Binary)</option>
+                <option value="8">8進数 (Octal)</option>
+                <option value="16">16進数 (Hexadecimal)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1.5">変換後の進数 (Target Base)</label>
+              <select id="radix-out-base" onchange="convertRadix()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 font-semibold focus:outline-none focus:border-sky-500 cursor-pointer">
+                <option value="2" selected>2進数 (Binary)</option>
+                <option value="8">8進数 (Octal)</option>
+                <option value="10">10進数 (Decimal)</option>
+                <option value="16">16進数 (Hexadecimal)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1.5">変換したい値を入力（半角英数字）</label>
+            <input type="text" id="radix-input" value="255" oninput="convertRadix()" placeholder="例: 255 または 11111111" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 font-mono text-xl text-sky-300 focus:outline-none focus:border-sky-500 transition-colors">
+            
+            <!-- Strict Error Banner -->
+            <div id="radix-error" class="hidden mt-2 p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-red-300 text-xs flex items-center gap-2">
+              <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span id="radix-error-text">入力に無効な文字が含まれています。</span>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/90 rounded-2xl p-6 border border-slate-800 space-y-4 shadow-inner">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-semibold text-slate-400">選択した進数での変換結果</span>
+              <button onclick="copyRadixResult()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 transition flex items-center gap-1 active:scale-95">
+                <span>結果をコピー</span>
+              </button>
+            </div>
+            <div id="radix-output" class="text-2xl md:text-3xl font-mono font-bold text-emerald-400 break-all">
+              11111111
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4 border-t border-slate-800 text-xs">
+              <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-slate-400 block mb-1">2進数 (Bin)</span>
+                <span id="all-bin" class="font-mono text-slate-200 font-bold break-all">11111111</span>
+              </div>
+              <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-slate-400 block mb-1">8進数 (Oct)</span>
+                <span id="all-oct" class="font-mono text-slate-200 font-bold break-all">377</span>
+              </div>
+              <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-slate-400 block mb-1">10進数 (Dec)</span>
+                <span id="all-dec" class="font-mono text-slate-200 font-bold break-all">255</span>
+              </div>
+              <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                <span class="text-slate-400 block mb-1">16進数 (Hex)</span>
+                <span id="all-hex" class="font-mono text-slate-200 font-bold break-all">FF</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Canvas: Bit Visualizer -->
+          <div class="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 flex flex-col items-center">
+            <span class="text-xs font-semibold text-slate-400 mb-3">16-Bit バイナリ可視化 (Bit Visualization)</span>
+            <canvas id="canvas-radix" width="560" height="70" class="max-w-full h-auto"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-sky-600 text-white px-5 py-3 rounded-2xl shadow-2xl font-medium text-sm flex items-center gap-2">
+    <svg class="w-5 h-5 text-sky-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toast-msg">コピーしました！</span>
+  </div>
+
+  <!-- Main Page Footer -->
+  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 tracking-wide">
+    &copy; 2026 さむさむ All rights reserved.
+  </footer>
+
+  <!-- JavaScript Implementation -->
+  <script>
+    // --- Drawer Menu & Accordion Logic ---
+    function openMenu() {
+      const drawer = document.getElementById('drawer-menu');
+      const backdrop = document.getElementById('menu-backdrop');
+      drawer.classList.remove('translate-x-full');
+      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      document.body.style.overflow = 'hidden'; // Lock scroll
+    }
+
+    function closeMenu() {
+      const drawer = document.getElementById('drawer-menu');
+      const backdrop = document.getElementById('menu-backdrop');
+      drawer.classList.add('translate-x-full');
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+      document.body.style.overflow = ''; // Unlock scroll
+    }
+
+    function toggleToolsAccordion() {
+      const accordion = document.getElementById('tools-accordion');
+      const arrow = document.getElementById('accordion-arrow');
+      const isOpen = accordion.classList.contains('open');
+
+      if (isOpen) {
+        accordion.classList.remove('open');
+        arrow.classList.remove('rotate-180');
+      } else {
+        accordion.classList.add('open');
+        arrow.classList.add('rotate-180');
+      }
+    }
+
+    // --- Radix Converter Logic ---
+    const canvasRadix = document.getElementById('canvas-radix');
+    const ctxRadix = canvasRadix.getContext('2d');
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = text;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function convertRadix() {
+      const inputStr = document.getElementById('radix-input').value.trim();
+      const inBase = parseInt(document.getElementById('radix-in-base').value);
+      const outBase = parseInt(document.getElementById('radix-out-base').value);
+
+      const errorBanner = document.getElementById('radix-error');
+      const errorText = document.getElementById('radix-error-text');
+
+      if (!inputStr) {
+        errorBanner.classList.add('hidden');
+        document.getElementById('radix-output').innerText = '0';
+        document.getElementById('all-bin').innerText = '0';
+        document.getElementById('all-oct').innerText = '0';
+        document.getElementById('all-dec').innerText = '0';
+        document.getElementById('all-hex').innerText = '0';
+        drawBitCanvas(0);
+        return;
+      }
+
+      let validRegex;
+      if (inBase === 2) validRegex = /^[01]+$/;
+      else if (inBase === 8) validRegex = /^[0-7]+$/;
+      else if (inBase === 10) validRegex = /^[0-9]+$/;
+      else if (inBase === 16) validRegex = /^[0-9a-fA-F]+$/;
+
+      if (!validRegex.test(inputStr)) {
+        errorText.innerText = `${inBase}進数で使用できない文字が含まれています。`;
+        errorBanner.classList.remove('hidden');
+        document.getElementById('radix-output').innerText = 'エラー';
+        drawBitCanvas(0);
+        return;
+      }
+
+      errorBanner.classList.add('hidden');
+
+      const decValue = parseInt(inputStr, inBase);
+
+      if (isNaN(decValue)) {
+        errorText.innerText = "数値が大きすぎるか無効です。";
+        errorBanner.classList.remove('hidden');
+        return;
+      }
+
+      const result = decValue.toString(outBase).toUpperCase();
+      document.getElementById('radix-output').innerText = result;
+
+      document.getElementById('all-bin').innerText = decValue.toString(2);
+      document.getElementById('all-oct').innerText = decValue.toString(8);
+      document.getElementById('all-dec').innerText = decValue.toString(10);
+      document.getElementById('all-hex').innerText = decValue.toString(16).toUpperCase();
+
+      drawBitCanvas(decValue);
+    }
+
+    function drawBitCanvas(num) {
+      const w = canvasRadix.width;
+      const h = canvasRadix.height;
+      ctxRadix.clearRect(0, 0, w, h);
+
+      const bitsCount = 16;
+      const boxWidth = 28;
+      const boxGap = 6;
+      const startX = (w - (bitsCount * (boxWidth + boxGap))) / 2;
+
+      for (let i = 0; i < bitsCount; i++) {
+        const bitVal = (num >> (bitsCount - 1 - i)) & 1;
+        const x = startX + i * (boxWidth + boxGap);
+        const y = 15;
+
+        ctxRadix.fillStyle = bitVal ? '#10b981' : '#1e293b';
+        ctxRadix.beginPath();
+        ctxRadix.roundRect(x, y, boxWidth, boxWidth, 6);
+        ctxRadix.fill();
+        ctxRadix.strokeStyle = bitVal ? '#34d399' : '#334155';
+        ctxRadix.stroke();
+
+        ctxRadix.fillStyle = bitVal ? '#ffffff' : '#64748b';
+        ctxRadix.font = 'bold 14px "Inter", sans-serif';
+        ctxRadix.textAlign = 'center';
+        ctxRadix.textBaseline = 'middle';
+        ctxRadix.fillText(bitVal.toString(), x + boxWidth / 2, y + boxWidth / 2);
+      }
+    }
+
+    function copyRadixResult() {
+      const val = document.getElementById('radix-output').innerText;
+      if (val && val !== 'エラー') {
+        const tempInput = document.createElement('input');
+        tempInput.value = val;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        showToast("変換結果をコピーしました！");
+      }
+    }
+
+    window.onload = function() {
+      convertRadix();
+    };
+  </script>
+</body>
+</html>

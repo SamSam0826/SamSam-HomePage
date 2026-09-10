@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>運勢おみくじ - さむさむ Official Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'Noto Sans JP', 'sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      background-color: #0b1120;
+      color: #f8fafc;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    /* Smooth accordion grid transition */
+    .accordion-content {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .accordion-content.open {
+      grid-template-rows: 1fr;
+    }
+    .accordion-inner {
+      overflow: hidden;
+    }
+    /* Menu Slide Animation */
+    .drawer-overlay {
+      transition: opacity 0.3s ease;
+    }
+    .drawer-panel {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-white pt-16">
+
+  <!-- Top Navigation Header (Always Fixed) -->
+  <header class="fixed top-0 left-0 right-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between shadow-md">
+    <a href="index.html" class="flex items-center gap-2 text-slate-100 font-bold tracking-wide hover:opacity-80 transition text-sm md:text-base">
+      <span class="bg-gradient-to-r from-sky-400 to-indigo-500 text-transparent bg-clip-text font-black">おみくじ</span>
+      <span class="text-xs text-slate-400 font-normal hidden sm:inline">Omikuzi</span>
+    </a>
+
+    <!-- MENU Button -->
+    <button id="menu-btn" onclick="toggleMenu()" class="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 rounded-xl text-slate-200 text-xs md:text-sm font-semibold transition hover:scale-105 active:scale-95 shadow-sm" aria-label="メニューを開く">
+      <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+      <span>MENU</span>
+    </button>
+  </header>
+
+  <!-- Slide-over Drawer / Hamburger Menu -->
+  <div id="drawer-container" class="fixed inset-0 z-50 pointer-events-none">
+    <!-- Backdrop -->
+    <div id="drawer-overlay" onclick="toggleMenu()" class="drawer-overlay absolute inset-0 bg-slate-950/70 backdrop-blur-sm opacity-0 pointer-events-none"></div>
+
+    <!-- Drawer Panel -->
+    <aside id="drawer-panel" class="drawer-panel absolute top-0 right-0 h-full w-full max-w-sm bg-slate-900 border-l border-slate-800 shadow-2xl translate-x-full pointer-events-auto flex flex-col justify-between overflow-y-auto">
+      <div>
+        <!-- Menu Header -->
+        <div class="p-4 border-b border-slate-800/80 flex items-center justify-between text-slate-200">
+          <div class="flex items-center gap-2.5 font-bold text-base">
+            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+            <span>メニュー</span>
+          </div>
+          <button onclick="toggleMenu()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition" aria-label="メニューを閉じる">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Menu Inner Links -->
+        <div class="p-4 space-y-4">
+          <!-- 1. ホームページへ -->
+          <a href="index.html" class="flex items-center gap-3 px-4 py-3.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-slate-100 font-bold transition hover:scale-[1.01]">
+            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            <span>ホームページへ</span>
+          </a>
+
+          <!-- 2. 便利ツール (Collapsible / Accordion) -->
+          <div class="border border-slate-800 bg-slate-900/80 rounded-xl overflow-hidden">
+            <!-- Accordion Toggle Header -->
+            <button onclick="toggleAccordion()" class="w-full flex items-center justify-between p-4 text-left font-bold text-slate-200 hover:bg-slate-800/50 transition">
+              <div class="flex items-center gap-3">
+                <!-- Flask/Tool Icon -->
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.6 15.12a2 2 0 00-1.169.176l-.1.05A2 2 0 003.3 17.1l1.5 3a2 2 0 001.788 1.1h10.824a2 2 0 001.789-1.1l1.5-3a2 2 0 00-.283-1.802zM12 2v7"></path>
+                </svg>
+                <span>便利ツール</span>
+              </div>
+              <svg id="accordion-arrow" class="w-4 h-4 text-slate-400 transform transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+
+            <!-- Accordion Content List -->
+            <div id="accordion-content" class="accordion-content open border-t border-slate-800/80">
+              <div class="accordion-inner bg-slate-950/40">
+                <ul id="tools-list" class="divide-y divide-slate-800/60 text-xs md:text-sm text-slate-300">
+                  <!-- Dynamically Rendered Tools (excluding omikuji.html) -->
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu Footer -->
+      <div class="p-4 bg-slate-950/90 border-t border-slate-800/80 text-center font-bold text-slate-300 text-sm tracking-wide">
+        さむさむ Official Website
+      </div>
+    </aside>
+  </div>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex-grow my-auto">
+    <section class="space-y-6">
+      <div class="glass-card rounded-3xl p-6 md:p-8 border border-slate-800 shadow-xl">
+        <div class="text-center max-w-xl mx-auto mb-6">
+          <h2 class="text-2xl md:text-3xl font-bold text-slate-100 flex items-center justify-center gap-2">
+            <span>⛩️ 運勢おみくじ</span>
+          </h2>
+          <p class="text-slate-400 text-xs md:text-sm mt-1">筒を振っておみくじの棒を取り出し、今日の運勢を占おう！</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-4xl mx-auto">
+          <!-- Canvas: Omikuji Animation -->
+          <div class="flex flex-col items-center justify-center bg-slate-900/90 rounded-2xl p-6 border border-slate-800 shadow-inner min-h-[380px]">
+            <canvas id="canvas-omikuji" width="320" height="320" class="max-w-full h-auto"></canvas>
+            <button onclick="drawOmikuji()" id="btn-draw-omikuji" class="mt-6 px-8 py-3.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold rounded-2xl shadow-lg shadow-red-600/30 transition hover:scale-105 active:scale-95 text-base flex items-center gap-2">
+              <span>🥢 おみくじを振る</span>
+            </button>
+          </div>
+
+          <!-- Pure Fortune Card -->
+          <div class="glass-card p-8 rounded-2xl border border-red-900/30 flex flex-col items-center justify-center text-center min-h-[380px] relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900/90 to-red-950/20 shadow-inner">
+            <div class="text-xs tracking-widest text-red-400 font-semibold uppercase mb-2">Today's Fortune</div>
+            <div id="omikuji-result-badge" class="text-6xl md:text-7xl font-black my-6 text-slate-600 transition-all duration-500 transform scale-95">
+              未測定
+            </div>
+            <div class="w-16 h-0.5 bg-amber-500/40 my-2"></div>
+            <p id="omikuji-subtext" class="text-sm text-slate-400">ボタンを押すとおみくじの筒が動き出します。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer (Copyright Requirement) -->
+  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950/50">
+    © 2026 さむさむ All rights reserved.
+  </footer>
+
+  <!-- JS Implementation -->
+  <script>
+    // Master List of All 10 Tools
+    const ALL_TOOLS = [
+      { name: "文字数カウント", url: "char-count.html" },
+      { name: "首都圏 ぶらり途中下車駅ガチャ", url: "station-gacha.html" },
+      { name: "リアルタイム地震情報", url: "earthquake.html" },
+      { name: "おみくじ", url: "omikuji.html" },
+      { name: "タイマー・ストップウォッチ", url: "timer.html" },
+      { name: "進数変換", url: "radix.html" },
+      { name: "Markdownリアルタイムエディタ", url: "markdown.html" },
+      { name: "QRコード作成・読み取り器", url: "qrcode.html" },
+      { name: "残り時間バー", url: "time-bar.html" },
+      { name: "パスワード生成", url: "password.html" }
+    ];
+
+    // Current page filename to exclude
+    const CURRENT_PAGE = "omikuji.html";
+
+    // Populate accordion tools menu
+    function renderToolsMenu() {
+      const listContainer = document.getElementById('tools-list');
+      if (!listContainer) return;
+
+      // Filter out current page
+      const filteredTools = ALL_TOOLS.filter(tool => tool.url !== CURRENT_PAGE);
+
+      listContainer.innerHTML = filteredTools.map(tool => `
+        <li>
+          <a href="${tool.url}" class="block px-5 py-3 hover:bg-slate-800/80 hover:text-sky-400 transition font-medium">
+            ${tool.name}
+          </a>
+        </li>
+      `).join('');
+    }
+
+    // Toggle Drawer Menu
+    let isMenuOpen = false;
+    function toggleMenu() {
+      isMenuOpen = !isMenuOpen;
+      const overlay = document.getElementById('drawer-overlay');
+      const panel = document.getElementById('drawer-panel');
+      const container = document.getElementById('drawer-container');
+
+      if (isMenuOpen) {
+        container.classList.remove('pointer-events-none');
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        overlay.classList.add('opacity-100');
+        panel.classList.remove('translate-x-full');
+        panel.classList.add('translate-x-0');
+        document.body.style.overflow = 'hidden';
+      } else {
+        overlay.classList.remove('opacity-100');
+        overlay.classList.add('opacity-0', 'pointer-events-none');
+        panel.classList.remove('translate-x-0');
+        panel.classList.add('translate-x-full');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+          if (!isMenuOpen) container.classList.add('pointer-events-none');
+        }, 300);
+      }
+    }
+
+    // Toggle Accordion Collapse/Expand
+    let isAccordionOpen = true;
+    function toggleAccordion() {
+      isAccordionOpen = !isAccordionOpen;
+      const content = document.getElementById('accordion-content');
+      const arrow = document.getElementById('accordion-arrow');
+
+      if (isAccordionOpen) {
+        content.classList.add('open');
+        arrow.classList.add('rotate-180');
+      } else {
+        content.classList.remove('open');
+        arrow.classList.remove('rotate-180');
+      }
+    }
+
+    // Omikuji Core Logic
+    const OMIKUJI_FORTUNES = [
+      { name: "大吉", color: "#ef4444" },
+      { name: "吉",   color: "#f97316" },
+      { name: "中吉", color: "#eab308" },
+      { name: "小吉", color: "#10b981" },
+      { name: "末吉", color: "#06b6d4" },
+      { name: "凶",   color: "#6366f1" },
+      { name: "大凶", color: "#8b5cf6" }
+    ];
+
+    const canvasOmikuji = document.getElementById('canvas-omikuji');
+    const ctxOmikuji = canvasOmikuji.getContext('2d');
+    let isDrawingOmikuji = false;
+
+    function drawOmikujiCanvas(shakeOffset = 0, stickOut = false) {
+      const w = canvasOmikuji.width;
+      const h = canvasOmikuji.height;
+      const cx = w / 2 + shakeOffset;
+      const cy = h / 2 + 20;
+
+      ctxOmikuji.clearRect(0, 0, w, h);
+
+      if (stickOut) {
+        ctxOmikuji.save();
+        ctxOmikuji.fillStyle = '#f59e0b';
+        ctxOmikuji.fillRect(cx - 6, cy - 170, 12, 100);
+        ctxOmikuji.fillStyle = '#b45309';
+        ctxOmikuji.font = 'bold 12px "Noto Sans JP"';
+        ctxOmikuji.fillText("吉", cx - 5, cy - 150);
+        ctxOmikuji.restore();
+      }
+
+      ctxOmikuji.save();
+      ctxOmikuji.translate(cx, cy);
+
+      ctxOmikuji.fillStyle = '#b45309';
+      ctxOmikuji.beginPath();
+      ctxOmikuji.moveTo(-40, -100);
+      ctxOmikuji.lineTo(40, -100);
+      ctxOmikuji.lineTo(55, 80);
+      ctxOmikuji.lineTo(-55, 80);
+      ctxOmikuji.closePath();
+      ctxOmikuji.fill();
+      ctxOmikuji.strokeStyle = '#78350f';
+      ctxOmikuji.lineWidth = 4;
+      ctxOmikuji.stroke();
+
+      ctxOmikuji.fillStyle = '#f59e0b';
+      ctxOmikuji.fillRect(-42, -108, 84, 12);
+
+      ctxOmikuji.fillStyle = '#fef3c7';
+      ctxOmikuji.fillRect(-20, -60, 40, 80);
+      ctxOmikuji.fillStyle = '#78350f';
+      ctxOmikuji.font = 'bold 18px "Noto Sans JP", serif';
+      ctxOmikuji.textAlign = 'center';
+      ctxOmikuji.fillText("御", 0, -35);
+      ctxOmikuji.fillText("神", 0, -10);
+      ctxOmikuji.fillText("籤", 0, 15);
+
+      ctxOmikuji.restore();
+    }
+
+    function drawOmikuji() {
+      if (isDrawingOmikuji) return;
+      isDrawingOmikuji = true;
+
+      const badge = document.getElementById('omikuji-result-badge');
+      const subtext = document.getElementById('omikuji-subtext');
+      badge.className = "text-6xl md:text-7xl font-black my-6 text-slate-600 transition-all duration-500 transform scale-95 opacity-50";
+      badge.innerText = "振出中...";
+      subtext.innerText = "筒を振っています...";
+
+      let shakes = 0;
+      const interval = setInterval(() => {
+        shakes++;
+        const offset = (shakes % 2 === 0 ? 1 : -1) * (Math.random() * 12 + 6);
+        drawOmikujiCanvas(offset, false);
+
+        if (shakes >= 25) {
+          clearInterval(interval);
+          drawOmikujiCanvas(0, true);
+          isDrawingOmikuji = false;
+
+          const result = OMIKUJI_FORTUNES[Math.floor(Math.random() * OMIKUJI_FORTUNES.length)];
+
+          badge.innerText = result.name;
+          badge.style.color = result.color;
+          badge.className = "text-7xl md:text-8xl font-black my-6 transition-all duration-500 transform scale-110 drop-shadow-lg";
+          subtext.innerText = `今日のあなたの運勢は【${result.name}】です。`;
+        }
+      }, 60);
+    }
+
+    window.onload = function() {
+      renderToolsMenu();
+      drawOmikujiCanvas(0, false);
+    };
+  </script>
+</body>
+</html>

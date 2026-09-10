@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>気象庁 リアルタイム地震情報モニター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #090d16;
+            color: #f1f5f9;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-live {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: #0f172a !important;
+            color: #f1f5f9 !important;
+            border: 1px solid #334155;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+        }
+        .leaflet-popup-tip {
+            background: #0f172a !important;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* スピンアニメーション */
+        .spin-custom {
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- ヘッダー -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800 shadow-xl">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">
+            <div class="flex items-center justify-between gap-3 w-full lg:w-auto">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-red-500/20 text-red-500 rounded-xl border border-red-500/30 flex items-center justify-center shrink-0">
+                        <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl md:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                            気象庁 地震情報
+                            <span id="live-badge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">LIVE</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">公式データ連携 リアルタイムモニター</p>
+                    </div>
+                </div>
+
+                <!-- モバイル用MENUボタン（画面幅が狭い時にヘッダー右上に配置） -->
+                <button onclick="toggleMenu()" class="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition text-xs shrink-0 active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <span>MENU</span>
+                </button>
+            </div>
+
+            <!-- ステータス & 設定コントロール -->
+            <div class="flex flex-wrap items-center gap-2 text-xs md:text-sm">
+                <!-- 手動更新ボタン -->
+                <button id="manual-refresh-btn" onclick="fetchEarthquakeData(true)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition active:scale-95 shadow-lg shadow-blue-600/20" title="今すぐデータを手動で更新します">
+                    <svg id="refresh-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>更新</span>
+                </button>
+
+                <!-- 自動更新 ON/OFF スイッチ -->
+                <button id="auto-update-toggle-btn" onclick="toggleAutoUpdate()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-600/50 transition" title="自動更新の有効/無効を切り替えます">
+                    <span id="auto-update-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="auto-update-label" class="font-medium">自動更新: ON</span>
+                </button>
+
+                <!-- 自動更新間隔設定ドロップダウン -->
+                <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                    <span class="text-xs text-slate-400 hidden sm:inline">間隔:</span>
+                    <select id="interval-select" onchange="changeUpdateInterval(this.value)" class="bg-transparent text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer">
+                        <option value="1000" class="bg-slate-900 text-slate-200">1秒</option>
+                        <option value="5000" selected class="bg-slate-900 text-slate-200">5秒</option>
+                        <option value="10000" class="bg-slate-900 text-slate-200">10秒</option>
+                        <option value="60000" class="bg-slate-900 text-slate-200">1分</option>
+                    </select>
+                </div>
+
+                <!-- 音声 ON/OFF 切り替えボタン -->
+                <button id="sound-toggle-btn" onclick="toggleSound()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    <svg id="sound-icon-on" class="w-4 h-4 text-emerald-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                    <svg id="sound-icon-off" class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+                    <span id="sound-label" class="hidden sm:inline">音声: OFF</span>
+                </button>
+
+                <!-- 最終更新日時インジケーター -->
+                <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+                    <span id="status-live-dot" class="w-2 h-2 rounded-full bg-emerald-500 pulse-live"></span>
+                    <span id="last-updated-time" class="text-slate-300 font-mono text-xs">データ受信中...</span>
+                </div>
+
+                <!-- PC用MENUボタン（大画面表示時） -->
+                <button onclick="toggleMenu()" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold transition text-xs shrink-0 active:scale-95 ml-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <span>MENU</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ハンバーガーメニュー (スライドドロワー & バックドロップ) -->
+    <div id="menu-overlay" onclick="toggleMenu()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <aside id="side-menu" class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-slate-900 border-l border-slate-800 z-50 transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl">
+        <!-- ドロワーヘッダー -->
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+            <span class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+                メニュー
+            </span>
+            <button onclick="toggleMenu()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- ドロワーコンテンツ -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- 1. ホームページへ -->
+            <a href="index.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/80 hover:bg-blue-600/20 hover:border-blue-500/40 border border-slate-700/60 text-slate-100 font-bold text-sm transition group">
+                <svg class="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 00-1 1m-6 0h6"></path>
+                </svg>
+                <span>ホームページへ</span>
+            </a>
+
+            <!-- 2. 便利ツール (折りたたみアコーディオン) -->
+            <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/40">
+                <button onclick="toggleAccordion()" class="w-full flex items-center justify-between p-3.5 text-slate-200 font-bold text-sm hover:bg-slate-800/50 transition">
+                    <span class="flex items-center gap-2.5">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                        </svg>
+                        便利ツール
+                    </span>
+                    <svg id="accordion-arrow" class="w-4 h-4 text-slate-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="accordion-content" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out bg-slate-900/60 divide-y divide-slate-800/40">
+                    <a href="char-count.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">文字数カウント</a>
+                    <a href="station-gacha.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">首都圏 ぶらり途中下車駅ガチャ</a>
+                    <a href="omikuji.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">おみくじ</a>
+                    <a href="timer.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">タイマー・ストップウォッチ</a>
+                    <a href="radix.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">進数変換</a>
+                    <a href="markdown.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">Markdownリアルタイムエディタ</a>
+                    <a href="qrcode.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">QRコード作成・読み取り器</a>
+                    <a href="time-bar.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">残り時間バー</a>
+                    <a href="password.html" class="block px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 transition pl-9">パスワード生成</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ドロワーフッター -->
+        <div class="p-4 border-t border-slate-800 text-center bg-slate-950/40">
+            <p class="text-xs font-semibold text-slate-400">さむさむ Official Website</p>
+        </div>
+    </aside>
+
+    <!-- メインコンテンツ -->
+    <div class="max-w-6xl mx-auto px-4 mt-6 space-y-6">
+
+        <!-- 震度凡例バー（全色分けを表示） -->
+        <section class="glass-panel rounded-2xl p-4 shadow-lg">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2"></path></svg>
+                    気象庁 震度階級 色分け凡例 （クリックで絞り込み）
+                </h2>
+                <button onclick="resetFilter()" class="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 self-end sm:self-auto">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    フィルター解除
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-5 sm:grid-cols-9 gap-1.5 text-center">
+                <button onclick="filterByIntensity('1')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="1">
+                    <span class="w-3 h-3 rounded-full bg-blue-600 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度1</span>
+                </button>
+                <button onclick="filterByIntensity('2')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="2">
+                    <span class="w-3 h-3 rounded-full bg-sky-600 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度2</span>
+                </button>
+                <button onclick="filterByIntensity('3')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="3">
+                    <span class="w-3 h-3 rounded-full bg-emerald-600 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度3</span>
+                </button>
+                <button onclick="filterByIntensity('4')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="4">
+                    <span class="w-3 h-3 rounded-full bg-yellow-500 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度4</span>
+                </button>
+                <button onclick="filterByIntensity('5-')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="5-">
+                    <span class="w-3 h-3 rounded-full bg-orange-500 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度5弱</span>
+                </button>
+                <button onclick="filterByIntensity('5+')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="5+">
+                    <span class="w-3 h-3 rounded-full bg-orange-600 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度5強</span>
+                </button>
+                <button onclick="filterByIntensity('6-')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="6-">
+                    <span class="w-3 h-3 rounded-full bg-red-600 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度6弱</span>
+                </button>
+                <button onclick="filterByIntensity('6+')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50" data-int="6+">
+                    <span class="w-3 h-3 rounded-full bg-red-800 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度6強</span>
+                </button>
+                <button onclick="filterByIntensity('7')" class="intensity-legend-btn p-2 rounded-xl border border-slate-700 hover:scale-105 transition flex flex-col items-center bg-slate-900/50 col-span-5 sm:col-span-1" data-int="7">
+                    <span class="w-3 h-3 rounded-full bg-purple-600 mb-1 shadow-sm"></span>
+                    <span class="text-xs font-bold text-white">震度7</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ローディング・エラー表示 -->
+        <div id="loading-state" class="glass-panel rounded-3xl p-12 text-center my-8">
+            <div class="relative w-16 h-16 mx-auto mb-4">
+                <div class="absolute inset-0 rounded-full border-4 border-blue-500/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
+            </div>
+            <p class="text-lg font-bold text-slate-200">気象庁防災サーバーからデータ取得中...</p>
+        </div>
+
+        <div id="error-state" class="hidden glass-panel border-red-500/50 rounded-3xl p-8 text-center bg-red-950/20">
+            <div class="text-red-400 font-bold text-lg mb-2">データの取得に失敗しました</div>
+            <button onclick="fetchEarthquakeData(true)" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold transition">
+                手動で再取得
+            </button>
+        </div>
+
+        <!-- 直近の地震表示 -->
+        <section id="latest-quake-section" class="hidden">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-red-500/20 text-red-400 border border-red-500/30">
+                        直近の地震 (最新報)
+                    </span>
+                    <span id="latest-time-ago" class="text-xs text-slate-400"></span>
+                </div>
+                <span id="latest-title-tag" class="text-xs font-mono text-slate-400 bg-slate-800 px-2.5 py-1 rounded-md"></span>
+            </div>
+
+            <div id="latest-quake-card" onclick="openModal(processedQuakeList[0])" class="glass-panel rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden transition-all duration-500 border-l-8 cursor-pointer hover:scale-[1.01]">
+                <div class="relative z-10 flex flex-col lg:flex-row items-stretch gap-6 md:gap-8">
+                    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-950/80 border border-slate-800/80 min-w-[180px] lg:min-w-[220px] shadow-inner text-center">
+                        <span class="text-xs font-extrabold tracking-wider uppercase text-slate-400 mb-1">最大震度</span>
+                        <div id="latest-intensity-val" class="text-6xl md:text-8xl font-black my-1 tracking-tight drop-shadow-lg">-</div>
+                        <span id="latest-intensity-label" class="text-xs font-bold px-3 py-1 rounded-full mt-2 bg-slate-800 text-slate-300">観測中</span>
+                    </div>
+
+                    <div class="flex-1 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="text-xs text-slate-400 font-semibold mb-1 flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                                震源地
+                            </div>
+                            <h2 id="latest-epicenter" class="text-3xl md:text-5xl font-black text-white tracking-wide leading-tight">-</h2>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 border-t border-slate-800 pt-4">
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/60">
+                                <span class="text-xs text-slate-400 block mb-0.5">発生日時</span>
+                                <span id="latest-datetime" class="text-sm md:text-base font-bold text-slate-100">-</span>
+                            </div>
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/60">
+                                <span class="text-xs text-slate-400 block mb-0.5">規模</span>
+                                <span id="latest-magnitude" class="text-sm md:text-base font-bold text-blue-400">M -</span>
+                            </div>
+                            <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/60 col-span-2 md:col-span-1">
+                                <span class="text-xs text-slate-400 block mb-0.5">津波の影響</span>
+                                <span id="latest-tsunami" class="text-sm md:text-base font-bold text-slate-200">情報確認中</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex justify-end">
+                            <span class="text-xs font-bold text-blue-400 flex items-center gap-1.5 bg-blue-500/10 px-4 py-2 rounded-xl border border-blue-500/30">
+                                <span>タップして詳細地図を見る</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 履歴リスト＆フィルター -->
+        <section id="history-section" class="hidden space-y-4">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-slate-800">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        地震履歴
+                        <span id="quake-count-badge" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">0件</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">重複を除去した有感地震の時系列リスト（タップで詳細地図を表示）</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <div class="relative flex-1 sm:w-48">
+                        <input type="text" id="search-input" placeholder="震源地で検索..." oninput="applyFilters()" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <select id="min-intensity-select" onchange="onSelectIntensityChange()" 
+                        class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                        <option value="ALL">全ての震度</option>
+                        <option value="1">震度1 以上</option>
+                        <option value="2">震度2 以上</option>
+                        <option value="3">震度3 以上</option>
+                        <option value="4">震度4 以上</option>
+                        <option value="5-">震度5弱 以上</option>
+                        <option value="5+">震度5強 以上</option>
+                        <option value="6-">震度6弱 以上</option>
+                        <option value="6+">震度6強 以上</option>
+                        <option value="7">震度7</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="quake-list" class="grid gap-3"></div>
+
+            <div id="empty-list-notice" class="hidden glass-panel p-8 text-center text-slate-400 rounded-2xl">
+                条件に該当する地震情報が見つかりませんでした。
+            </div>
+        </section>
+
+        <!-- フッター -->
+        <footer class="mt-12 text-center text-xs text-slate-500 space-y-2 pb-8 border-t border-slate-800/80 pt-6">
+            <p>データ出典: <a href="https://www.jma.go.jp/" target="_blank" class="underline hover:text-slate-400">気象庁 防災情報XML / JSON</a></p>
+            <p class="text-slate-400 font-medium">© 2026 さむさむ All rights reserved.</p>
+        </footer>
+
+    </div>
+
+    <!-- 詳細モーダル画面（高精細マップ付き） -->
+    <div id="quake-detail-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md transition-opacity duration-300 opacity-0 pointer-events-none">
+        <div class="glass-panel w-full max-w-3xl max-h-[92vh] rounded-3xl border border-slate-700/80 shadow-2xl flex flex-col overflow-hidden transform scale-95 transition-transform duration-300" id="modal-content-box">
+            
+            <div class="px-5 py-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/80 shrink-0">
+                <div class="flex items-center gap-3">
+                    <span id="modal-intensity-badge" class="px-3 py-1 rounded-xl font-extrabold text-sm text-white shadow-sm">震度-</span>
+                    <div>
+                        <h3 id="modal-epicenter" class="text-lg md:text-2xl font-black text-white leading-tight">-</h3>
+                        <p id="modal-datetime" class="text-xs text-slate-400 font-mono mt-0.5">-</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="p-5 md:p-6 space-y-5 overflow-y-auto flex-1">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">最大震度</span>
+                        <span id="modal-spec-intensity" class="text-lg font-black">-</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">規模</span>
+                        <span id="modal-spec-mag" class="text-lg font-bold text-blue-400">M -</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">震源の深さ</span>
+                        <span id="modal-spec-depth" class="text-lg font-bold text-slate-200">-</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block mb-1">位置座標</span>
+                        <span id="modal-spec-coords" class="text-xs font-semibold text-slate-300 font-mono leading-tight block">-</span>
+                    </div>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center gap-3">
+                    <div class="p-2 rounded-xl bg-slate-800 text-blue-400 shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p id="modal-tsunami-text" class="text-xs md:text-sm font-medium text-slate-300">-</p>
+                </div>
+
+                <!-- 見やすい高精細マップエリア -->
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            震源地インタラクティブマップ
+                        </h4>
+                        
+                        <!-- マップ切り替えタブ -->
+                        <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+                            <button id="map-style-dark" onclick="switchMapTile('dark')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">ダーク</button>
+                            <button id="map-style-street" onclick="switchMapTile('street')" class="px-2.5 py-1 rounded-lg text-white font-medium transition bg-blue-600 shadow-sm">標準 (日本語)</button>
+                            <button id="map-style-sat" onclick="switchMapTile('sat')" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition">衛星写真</button>
+                            <button onclick="recenterMap()" class="ml-1 p-1 px-2 text-blue-400 hover:bg-blue-500/20 rounded-lg font-semibold flex items-center gap-1" title="震源を中心に表示">
+                                🎯 中心
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full h-72 md:h-80 rounded-2xl overflow-hidden border border-slate-700/80 shadow-inner bg-slate-950">
+                        <div id="modal-map" class="w-full h-full z-0"></div>
+                        
+                        <!-- 凡例オーバーレイ -->
+                        <div class="absolute bottom-3 left-3 z-10 glass-panel px-3 py-1.5 rounded-xl border border-slate-700/80 text-[11px] text-slate-300 space-y-0.5 shadow-lg pointer-events-none">
+                            <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-600 border border-white inline-block"></span> 震源地</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center justify-between">
+                        <span>震度１以上が観測された市町村一覧</span>
+                        <span id="detail-loading-spinner" class="text-xs text-blue-400 hidden">詳細読み込み中...</span>
+                    </h4>
+                    <div id="modal-regional-intensities" class="space-y-2.5">
+                        <div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-500 text-center">読み込み中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const JMA_URL = 'https://www.jma.go.jp/bosai/quake/data/list.json';
+        
+        // ハンバーガーメニュー & アコーディオン制御
+        function toggleMenu() {
+            const overlay = document.getElementById('menu-overlay');
+            const menu = document.getElementById('side-menu');
+            const isOpen = !menu.classList.contains('translate-x-full');
+
+            if (isOpen) {
+                menu.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            } else {
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                menu.classList.remove('translate-x-full');
+            }
+        }
+
+        function toggleAccordion() {
+            const content = document.getElementById('accordion-content');
+            const arrow = document.getElementById('accordion-arrow');
+            
+            if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+                content.style.maxHeight = '0px';
+                arrow.classList.remove('rotate-180');
+            } else {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                arrow.classList.add('rotate-180');
+            }
+        }
+
+        // 自動更新関連の状態管理変数
+        let autoUpdateIntervalMs = 5000; // 初期値: 5秒 (5000ms)
+        let isAutoUpdateOn = true;        // 初期値: ON
+        let autoUpdateTimerId = null;     // タイマーID
+        let isFetching = false;           // リクエスト重複防止用フラグ
+
+        let rawQuakeList = [];
+        let processedQuakeList = [];
+        let filteredQuakeList = [];
+        let previousLatestId = null;
+        let isSoundEnabled = false;
+        let selectedIntensityFilter = null;
+        
+        let leafletMap = null;
+        let currentMapTile = 'street';
+        let currentTileLayer = null;
+        let currentMarker = null;
+        let currentLat = null;
+        let currentLng = null;
+
+        // タイル設定
+        const TILE_SERVERS = {
+            dark: {
+                url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                subdomains: 'abcd',
+                attribution: '&copy; CARTO'
+            },
+            street: {
+                url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                subdomains: 'abcd',
+                attribution: '&copy; CARTO Voyager'
+            },
+            sat: {
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                subdomains: [],
+                attribution: '&copy; Esri World Imagery'
+            }
+        };
+
+        // 自動更新タイマーの再設定関数
+        function setupAutoUpdateTimer() {
+            if (autoUpdateTimerId) {
+                clearInterval(autoUpdateTimerId);
+                autoUpdateTimerId = null;
+            }
+            if (isAutoUpdateOn) {
+                autoUpdateTimerId = setInterval(() => {
+                    fetchEarthquakeData(false);
+                }, autoUpdateIntervalMs);
+            }
+        }
+
+        // 自動更新 ON/OFF の切替関数
+        function toggleAutoUpdate() {
+            isAutoUpdateOn = !isAutoUpdateOn;
+            const toggleBtn = document.getElementById('auto-update-toggle-btn');
+            const dot = document.getElementById('auto-update-dot');
+            const label = document.getElementById('auto-update-label');
+            const liveBadge = document.getElementById('live-badge');
+            const statusLiveDot = document.getElementById('status-live-dot');
+
+            if (isAutoUpdateOn) {
+                toggleBtn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-600/50 transition";
+                dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+                label.textContent = "自動更新: ON";
+                liveBadge.textContent = "LIVE";
+                liveBadge.className = "text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30";
+                statusLiveDot.className = "w-2 h-2 rounded-full bg-emerald-500 pulse-live";
+            } else {
+                toggleBtn.className = "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 transition";
+                dot.className = "w-2 h-2 rounded-full bg-slate-500";
+                label.textContent = "自動更新: OFF";
+                liveBadge.textContent = "PAUSED";
+                liveBadge.className = "text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30";
+                statusLiveDot.className = "w-2 h-2 rounded-full bg-amber-500";
+            }
+
+            setupAutoUpdateTimer();
+        }
+
+        // 自動更新間隔の変更関数
+        function changeUpdateInterval(newIntervalMs) {
+            autoUpdateIntervalMs = parseInt(newIntervalMs, 10);
+            if (isAutoUpdateOn) {
+                setupAutoUpdateTimer();
+            }
+        }
+
+        function parseCod(cod) {
+            if (!cod) return null;
+            const match = cod.match(/([+-]\d+\.?\d*)\s*([+-]\d+\.?\d*)\s*([+-]?\d+)\//);
+            if (!match) return null;
+            const lat = parseFloat(match[1]);
+            const lng = parseFloat(match[2]);
+            const depthMeters = Math.abs(parseInt(match[3], 10));
+            let depthKm = depthMeters > 0 ? `約${Math.round(depthMeters / 1000)}km` : 'ごく浅い';
+            return { lat, lng, depthKm };
+        }
+
+        let audioCtx = null;
+        function playBeep() {
+            if (!isSoundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            isSoundEnabled = !isSoundEnabled;
+            const btn = document.getElementById('sound-toggle-btn');
+            const iconOn = document.getElementById('sound-icon-on');
+            const iconOff = document.getElementById('sound-icon-off');
+            const label = document.getElementById('sound-label');
+
+            if (isSoundEnabled) {
+                iconOn.classList.remove('hidden');
+                iconOff.classList.add('hidden');
+                label.textContent = "音声: ON";
+                btn.classList.add('bg-emerald-950/40', 'border-emerald-600/50', 'text-emerald-300');
+                playBeep();
+            } else {
+                iconOn.classList.add('hidden');
+                iconOff.classList.remove('hidden');
+                label.textContent = "音声: OFF";
+                btn.classList.remove('bg-emerald-950/40', 'border-emerald-600/50', 'text-emerald-300');
+            }
+        }
+
+        function normalizeIntensity(val) {
+            if (!val) return '';
+            let str = String(val).trim();
+            str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            
+            if (str === '1' || str === '10') return '1';
+            if (str === '2' || str === '20') return '2';
+            if (str === '3' || str === '30') return '3';
+            if (str === '4' || str === '40') return '4';
+            if (str === '5-' || str === '5弱' || str === '50' || str.includes('5-') || str.includes('5弱')) return '5-';
+            if (str === '5+' || str === '5強' || str === '55' || str.includes('5+') || str.includes('5強')) return '5+';
+            if (str === '6-' || str === '6弱' || str === '60' || str.includes('6-') || str.includes('6弱')) return '6-';
+            if (str === '6+' || str === '6強' || str === '65' || str.includes('6+') || str.includes('6強')) return '6+';
+            if (str === '7' || str === '70') return '7';
+            return str;
+        }
+
+        const INTENSITY_MAP = {
+            '1': { name: '震度1', bgClass: 'from-blue-900/40 to-slate-900', borderClass: 'border-blue-500', badgeBg: 'bg-blue-600', textClass: 'text-blue-400', rankNum: 1 },
+            '2': { name: '震度2', bgClass: 'from-sky-900/40 to-slate-900', borderClass: 'border-sky-500', badgeBg: 'bg-sky-600', textClass: 'text-sky-400', rankNum: 2 },
+            '3': { name: '震度3', bgClass: 'from-emerald-900/40 to-slate-900', borderClass: 'border-emerald-500', badgeBg: 'bg-emerald-600', textClass: 'text-emerald-400', rankNum: 3 },
+            '4': { name: '震度4', bgClass: 'from-yellow-900/40 to-slate-900', borderClass: 'border-yellow-500', badgeBg: 'bg-yellow-500', textClass: 'text-yellow-400', rankNum: 4 },
+            '5-': { name: '震度5弱', bgClass: 'from-orange-900/50 to-slate-900', borderClass: 'border-orange-500', badgeBg: 'bg-orange-500', textClass: 'text-orange-400', rankNum: 5 },
+            '5+': { name: '震度5強', bgClass: 'from-orange-950/70 to-slate-900', borderClass: 'border-orange-600', badgeBg: 'bg-orange-600', textClass: 'text-orange-500', rankNum: 6 },
+            '6-': { name: '震度6弱', bgClass: 'from-red-950/70 to-slate-900', borderClass: 'border-red-600', badgeBg: 'bg-red-600', textClass: 'text-red-400', rankNum: 7 },
+            '6+': { name: '震度6強', bgClass: 'from-red-950/90 to-slate-900', borderClass: 'border-red-700', badgeBg: 'bg-red-800', textClass: 'text-red-500', rankNum: 8 },
+            '7': { name: '震度7', bgClass: 'from-purple-950/90 to-slate-900', borderClass: 'border-purple-600', badgeBg: 'bg-purple-600', textClass: 'text-purple-400', rankNum: 9 }
+        };
+
+        function getIntensityMeta(maxi) {
+            const normalized = normalizeIntensity(maxi);
+            return INTENSITY_MAP[normalized] || { name: normalized || '不明', bgClass: 'from-slate-800 to-slate-900', borderClass: 'border-slate-700', badgeBg: 'bg-slate-700', textClass: 'text-slate-300', rankNum: 0 };
+        }
+
+        function sanitizeAndDeduplicate(data) {
+            if (!Array.isArray(data)) return [];
+            const validItems = data.filter(item => {
+                const hasAnm = item.anm && item.anm.trim() !== "";
+                const normMaxi = normalizeIntensity(item.maxi);
+                const hasMaxi = normMaxi !== "" && normMaxi !== "0" && normMaxi !== "不明";
+                const isNotTraining = !item.ttl || (!item.ttl.includes("訓練") && !item.ttl.includes("試験"));
+                return hasAnm && hasMaxi && isNotTraining;
+            }).map(item => ({ ...item, maxi: normalizeIntensity(item.maxi) }));
+
+            const map = new Map();
+            validItems.forEach(item => {
+                const timeKey = item.at ? item.at.substring(0, 16) : item.ctt;
+                const uniqueKey = `${timeKey}_${item.anm}`;
+                if (!map.has(uniqueKey)) {
+                    map.set(uniqueKey, item);
+                } else {
+                    const existing = map.get(uniqueKey);
+                    if (item.ttl && item.ttl.includes("震源・震度") && (!existing.ttl || !existing.ttl.includes("震源・震度"))) {
+                        map.set(uniqueKey, item);
+                    }
+                }
+            });
+            return Array.from(map.values());
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return '不明';
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return isoString;
+            return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function getTimeAgo(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return '';
+            const diffSec = Math.floor((new Date() - d) / 1000);
+            if (diffSec < 60) return 'たった今';
+            if (diffSec < 3600) return `${Math.floor(diffSec / 60)}分前`;
+            if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}時間前`;
+            return `${Math.floor(diffSec / 86400)}日前`;
+        }
+
+        function renderUI() {
+            if (processedQuakeList.length === 0) {
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('error-state').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+            document.getElementById('latest-quake-section').classList.remove('hidden');
+            document.getElementById('history-section').classList.remove('hidden');
+
+            const latest = processedQuakeList[0];
+            const latestMeta = getIntensityMeta(latest.maxi);
+            const latestCard = document.getElementById('latest-quake-card');
+
+            latestCard.className = `glass-panel rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden transition-all duration-500 border-l-8 ${latestMeta.borderClass} bg-gradient-to-br ${latestMeta.bgClass} cursor-pointer hover:scale-[1.01]`;
+            
+            const intensityValEl = document.getElementById('latest-intensity-val');
+            intensityValEl.textContent = latestMeta.name.replace('震度', '');
+            intensityValEl.className = `text-6xl md:text-8xl font-black my-1 tracking-tight drop-shadow-lg ${latestMeta.textClass}`;
+
+            document.getElementById('latest-intensity-label').textContent = latestMeta.name;
+            document.getElementById('latest-epicenter').textContent = latest.anm || '震源地不明';
+            document.getElementById('latest-datetime').textContent = formatDateTime(latest.at);
+            document.getElementById('latest-time-ago').textContent = getTimeAgo(latest.at);
+            document.getElementById('latest-magnitude').textContent = latest.mag ? `M ${latest.mag}` : 'M不明';
+            document.getElementById('latest-title-tag').textContent = latest.ttl || '地震情報';
+
+            const tsunamiEl = document.getElementById('latest-tsunami');
+            if (latest.cmt && latest.cmt.includes('津波')) {
+                tsunamiEl.textContent = latest.cmt;
+                tsunamiEl.className = "text-sm md:text-base font-bold text-yellow-400 animate-pulse";
+            } else {
+                tsunamiEl.textContent = '津波の心配なし';
+                tsunamiEl.className = "text-sm md:text-base font-medium text-slate-300";
+            }
+
+            const currentLatestId = `${latest.at}_${latest.anm}`;
+            if (previousLatestId && previousLatestId !== currentLatestId) {
+                playBeep();
+            }
+            previousLatestId = currentLatestId;
+
+            renderHistoryList();
+        }
+
+        function renderHistoryList() {
+            const listContainer = document.getElementById('quake-list');
+            const emptyNotice = document.getElementById('empty-list-notice');
+            listContainer.innerHTML = '';
+
+            const searchKeyword = document.getElementById('search-input').value.trim();
+            const minIntVal = document.getElementById('min-intensity-select').value;
+            const isFilterActive = (searchKeyword !== '') || (minIntVal !== 'ALL') || (selectedIntensityFilter !== null);
+            const historyItems = isFilterActive ? filteredQuakeList : filteredQuakeList.slice(1);
+
+            document.getElementById('quake-count-badge').textContent = `${processedQuakeList.length}件の記録`;
+
+            if (historyItems.length === 0) {
+                emptyNotice.classList.remove('hidden');
+                return;
+            }
+            emptyNotice.classList.add('hidden');
+
+            historyItems.forEach(quake => {
+                const meta = getIntensityMeta(quake.maxi);
+                const card = document.createElement('div');
+                card.className = `glass-panel p-4 rounded-2xl border-l-4 ${meta.borderClass} hover:bg-slate-800/80 transition flex items-center justify-between gap-4 group cursor-pointer active:scale-[0.99]`;
+                card.onclick = () => openModal(quake);
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center font-black text-xl shrink-0 shadow-inner ${meta.textClass}">
+                            ${meta.name.replace('震度', '')}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-extrabold text-slate-100 text-base md:text-lg truncate group-hover:text-blue-400 transition flex items-center gap-2">
+                                <span>${quake.anm || '震源地不明'}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                <span>${formatDateTime(quake.at)}</span>
+                                <span class="font-semibold text-blue-400">${quake.mag ? 'M' + quake.mag : ''}</span>
+                                <span class="text-slate-500">${getTimeAgo(quake.at)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 flex items-center gap-2">
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-800/80 text-slate-300 border border-slate-700/60 inline-block">
+                            ${meta.name}
+                        </span>
+                        <svg class="w-4 h-4 text-slate-600 group-hover:text-blue-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        function openModal(quake) {
+            if (!quake) return;
+            const modal = document.getElementById('quake-detail-modal');
+            const modalBox = document.getElementById('modal-content-box');
+            const meta = getIntensityMeta(quake.maxi);
+            const parsedCod = parseCod(quake.cod);
+
+            document.getElementById('modal-epicenter').textContent = quake.anm || '震源地不明';
+            document.getElementById('modal-datetime').textContent = `${formatDateTime(quake.at)} 発生`;
+            
+            const badgeEl = document.getElementById('modal-intensity-badge');
+            badgeEl.textContent = meta.name;
+            badgeEl.className = `px-3 py-1 rounded-xl font-extrabold text-sm text-white shadow-sm ${meta.badgeBg}`;
+
+            document.getElementById('modal-spec-intensity').textContent = meta.name;
+            document.getElementById('modal-spec-intensity').className = `text-lg font-black ${meta.textClass}`;
+            document.getElementById('modal-spec-mag').textContent = quake.mag ? `M ${quake.mag}` : 'M不明';
+            document.getElementById('modal-spec-depth').textContent = parsedCod ? parsedCod.depthKm : '不明';
+
+            document.getElementById('modal-spec-coords').innerHTML = parsedCod 
+                ? `北緯${parsedCod.lat.toFixed(2)}°<br>東経${parsedCod.lng.toFixed(2)}°` 
+                : '座標データなし';
+
+            const tsunamiText = document.getElementById('modal-tsunami-text');
+            if (quake.cmt && quake.cmt.includes('津波')) {
+                tsunamiText.textContent = quake.cmt;
+                tsunamiText.className = "text-xs md:text-sm font-bold text-yellow-400";
+            } else {
+                tsunamiText.textContent = 'この地震による津波の心配はありません。';
+                tsunamiText.className = "text-xs md:text-sm font-medium text-slate-300";
+            }
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modalBox.classList.remove('scale-95');
+                modalBox.classList.add('scale-100');
+            }, 10);
+
+            if (parsedCod) {
+                initModalMap(parsedCod.lat, parsedCod.lng, quake.maxi, quake.anm, quake.mag, parsedCod.depthKm);
+            } else {
+                document.getElementById('modal-map').innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs text-slate-500 bg-slate-950">位置データなし</div>`;
+            }
+
+            loadDetailedRegions(quake.json);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('quake-detail-modal');
+            const modalBox = document.getElementById('modal-content-box');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modalBox.classList.remove('scale-100');
+            modalBox.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        function initModalMap(lat, lng, intKey, epicenterName, mag, depth) {
+            currentLat = lat;
+            currentLng = lng;
+            const mapContainer = document.getElementById('modal-map');
+            mapContainer.innerHTML = '';
+
+            if (leafletMap) {
+                leafletMap.off();
+                leafletMap.remove();
+                leafletMap = null;
+            }
+
+            leafletMap = L.map('modal-map', { 
+                zoomControl: true, 
+                attributionControl: false 
+            }).setView([lat, lng], 8);
+
+            setMapTileLayer(currentMapTile);
+
+            const customIcon = L.divIcon({
+                className: 'epicenter-custom-icon',
+                html: `
+                    <div class="relative flex items-center justify-center">
+                        <div class="w-8 h-8 rounded-full border-2 border-white shadow-2xl flex items-center justify-center font-black text-xs text-white bg-red-600 shadow-red-500/50">
+                            ✕
+                        </div>
+                    </div>
+                `,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
+            currentMarker = L.marker([lat, lng], { icon: customIcon }).addTo(leafletMap);
+
+            currentMarker.bindPopup(`
+                <div class="p-1 text-center space-y-1">
+                    <div class="text-xs font-bold text-red-400">【震源地】</div>
+                    <div class="text-base font-extrabold text-white">${epicenterName}</div>
+                    <div class="text-xs text-slate-300 font-mono">M ${mag || '-'} / 深さ ${depth || '-'}</div>
+                </div>
+            `, { offset: [0, -10] }).openPopup();
+
+            setTimeout(() => { 
+                if (leafletMap) leafletMap.invalidateSize(); 
+            }, 250);
+        }
+
+        function setMapTileLayer(type) {
+            if (!leafletMap) return;
+            if (currentTileLayer) {
+                leafletMap.removeLayer(currentTileLayer);
+            }
+
+            const conf = TILE_SERVERS[type] || TILE_SERVERS.dark;
+            currentTileLayer = L.tileLayer(conf.url, {
+                maxZoom: 18,
+                subdomains: conf.subdomains,
+                attribution: conf.attribution
+            }).addTo(leafletMap);
+
+            currentMapTile = type;
+
+            ['dark', 'street', 'sat'].forEach(t => {
+                const btn = document.getElementById(`map-style-${t}`);
+                if (!btn) return;
+                if (t === type) {
+                    btn.className = "px-2.5 py-1 rounded-lg text-white font-medium transition bg-blue-600 shadow-sm";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white font-medium transition";
+                }
+            });
+        }
+
+        function switchMapTile(type) {
+            setMapTileLayer(type);
+        }
+
+        function recenterMap() {
+            if (leafletMap && currentLat && currentLng) {
+                leafletMap.setView([currentLat, currentLng], 8, { animate: true });
+                if (currentMarker) currentMarker.openPopup();
+            }
+        }
+
+        async function loadDetailedRegions(jsonFileName) {
+            const container = document.getElementById('modal-regional-intensities');
+            const spinner = document.getElementById('detail-loading-spinner');
+            if (!jsonFileName) {
+                container.innerHTML = `<div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 text-center">詳細データなし</div>`;
+                return;
+            }
+            spinner.classList.remove('hidden');
+            try {
+                const response = await fetch(`https://www.jma.go.jp/bosai/quake/data/${jsonFileName}?_=${Date.now()}`);
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+
+                const body = data.Body || data.body;
+                const intensity = body?.Intensity || body?.intensity;
+                const observation = intensity?.Observation || intensity?.observation;
+                const prefsRaw = observation?.Pref || observation?.pref;
+
+                const toArray = v => !v ? [] : (Array.isArray(v) ? v : [v]);
+                const prefs = toArray(prefsRaw);
+
+                if (prefs.length === 0) {
+                    container.innerHTML = `<div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 text-center">震度観測点の詳細データはありません（遠田・無感または初期速報）</div>`;
+                    return;
+                }
+
+                const intensityPrefCityMap = {};
+
+                prefs.forEach(pref => {
+                    const prefName = pref.Name || pref.name;
+                    const areas = toArray(pref.Area || pref.area);
+
+                    areas.forEach(area => {
+                        const cities = toArray(area.City || area.city);
+                        if (cities.length > 0) {
+                            cities.forEach(city => {
+                                if (!city) return;
+                                const rawInt = city.MaxInt || city.maxInt || city.Int || city.int;
+                                if (!rawInt) return;
+                                const normInt = normalizeIntensity(rawInt);
+                                if (!normInt) return;
+
+                                if (!intensityPrefCityMap[normInt]) intensityPrefCityMap[normInt] = {};
+                                if (!intensityPrefCityMap[normInt][prefName]) intensityPrefCityMap[normInt][prefName] = [];
+
+                                const cityName = city.Name || city.name || area.Name || area.name;
+                                if (!intensityPrefCityMap[normInt][prefName].includes(cityName)) {
+                                    intensityPrefCityMap[normInt][prefName].push(cityName);
+                                }
+                            });
+                        } else {
+                            const rawInt = area.MaxInt || area.maxInt;
+                            if (!rawInt) return;
+                            const normInt = normalizeIntensity(rawInt);
+                            if (!normInt) return;
+
+                            if (!intensityPrefCityMap[normInt]) intensityPrefCityMap[normInt] = {};
+                            if (!intensityPrefCityMap[normInt][prefName]) intensityPrefCityMap[normInt][prefName] = [];
+
+                            const areaName = area.Name || area.name || prefName;
+                            if (!intensityPrefCityMap[normInt][prefName].includes(areaName)) {
+                                intensityPrefCityMap[normInt][prefName].push(areaName);
+                            }
+                        }
+                    });
+                });
+
+                const sortedInts = Object.keys(intensityPrefCityMap).sort((a, b) => (getIntensityMeta(b).rankNum || 0) - (getIntensityMeta(a).rankNum || 0));
+
+                if (sortedInts.length === 0) {
+                    container.innerHTML = `<div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 text-center">震度1以上の観測市町村情報はありません</div>`;
+                    return;
+                }
+
+                let html = `
+                    <div class="overflow-x-auto rounded-2xl border border-slate-800/80 shadow-md">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/90 text-slate-400 font-bold border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2.5 px-3 text-center w-20">震度</th>
+                                    <th class="py-2.5 px-3 text-center w-28">都道府県</th>
+                                    <th class="py-2.5 px-3">観測市町村 (震度1以上)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60 bg-slate-950/40">
+                `;
+
+                sortedInts.forEach(intKey => {
+                    const meta = getIntensityMeta(intKey);
+                    const prefMap = intensityPrefCityMap[intKey];
+                    const prefNames = Object.keys(prefMap);
+
+                    prefNames.forEach((prefName) => {
+                        const citiesStr = prefMap[prefName].join('、');
+                        html += `
+                            <tr class="hover:bg-slate-900/40 transition">
+                                <td class="py-2.5 px-3 text-center font-extrabold">
+                                    <span class="inline-block px-2 py-0.5 rounded-md ${meta.badgeBg} text-white text-[11px]">
+                                        ${meta.name}
+                                    </span>
+                                </td>
+                                <td class="py-2.5 px-3 text-center font-bold text-slate-300">
+                                    ${prefName}
+                                </td>
+                                <td class="py-2.5 px-3 text-slate-200 leading-relaxed font-medium">
+                                    ${citiesStr}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+
+                html += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = `<div class="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 text-center">詳細データの読み込みに失敗しました</div>`;
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('keydown', (e) => { 
+            if (e.key === 'Escape') {
+                closeModal();
+                const menu = document.getElementById('side-menu');
+                if (!menu.classList.contains('translate-x-full')) {
+                    toggleMenu();
+                }
+            }
+        });
+        
+        document.getElementById('quake-detail-modal')?.addEventListener('click', (e) => { if (e.target.id === 'quake-detail-modal') closeModal(); });
+
+        function applyFilters() {
+            const searchKeyword = document.getElementById('search-input').value.trim().toLowerCase();
+            const minIntVal = document.getElementById('min-intensity-select').value;
+
+            filteredQuakeList = processedQuakeList.filter(item => {
+                const matchKeyword = !searchKeyword || (item.anm && item.anm.toLowerCase().includes(searchKeyword));
+                let matchIntensity = true;
+                if (minIntVal !== 'ALL') {
+                    const itemMeta = getIntensityMeta(item.maxi);
+                    const targetMeta = getIntensityMeta(minIntVal);
+                    matchIntensity = itemMeta.rankNum >= targetMeta.rankNum;
+                }
+                if (selectedIntensityFilter) {
+                    matchIntensity = matchIntensity && (item.maxi === normalizeIntensity(selectedIntensityFilter));
+                }
+                return matchKeyword && matchIntensity;
+            });
+            renderHistoryList();
+        }
+
+        function onSelectIntensityChange() {
+            selectedIntensityFilter = null;
+            document.querySelectorAll('.intensity-legend-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-900/40'));
+            applyFilters();
+        }
+
+        function filterByIntensity(intKey) {
+            const normalizedKey = normalizeIntensity(intKey);
+            selectedIntensityFilter = selectedIntensityFilter === normalizedKey ? null : normalizedKey;
+
+            document.querySelectorAll('.intensity-legend-btn').forEach(btn => {
+                if (normalizeIntensity(btn.getAttribute('data-int')) === selectedIntensityFilter) {
+                    btn.classList.add('ring-2', 'ring-blue-400', 'bg-blue-900/40');
+                } else {
+                    btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-900/40');
+                }
+            });
+            applyFilters();
+        }
+
+        function resetFilter() {
+            selectedIntensityFilter = null;
+            document.getElementById('search-input').value = '';
+            document.getElementById('min-intensity-select').value = 'ALL';
+            document.querySelectorAll('.intensity-legend-btn').forEach(btn => btn.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-900/40'));
+            applyFilters();
+        }
+
+        async function fetchEarthquakeData(isManual = false) {
+            if (isFetching) return;
+            isFetching = true;
+
+            const refreshIcon = document.getElementById('refresh-icon');
+            if (isManual && refreshIcon) {
+                refreshIcon.classList.add('spin-custom');
+            }
+
+            try {
+                const response = await fetch(`${JMA_URL}?_=${Date.now()}`);
+                if (!response.ok) throw new Error();
+                rawQuakeList = await response.json();
+                processedQuakeList = sanitizeAndDeduplicate(rawQuakeList);
+                filteredQuakeList = [...processedQuakeList];
+                applyFilters();
+                renderUI();
+                
+                const now = new Date();
+                document.getElementById('last-updated-time').textContent = `更新 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            } catch (err) {
+                document.getElementById('last-updated-time').textContent = `取得失敗`;
+            } finally {
+                isFetching = false;
+                if (refreshIcon) {
+                    setTimeout(() => refreshIcon.classList.remove('spin-custom'), 500);
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchEarthquakeData();
+            setupAutoUpdateTimer();
+        });
+    </script>
+</body>
+</html>

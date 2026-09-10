@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>リアルタイム残り時間バー</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans JP', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans JP', sans-serif;
+      background-color: #0b0f19;
+      color: #f8fafc;
+    }
+    
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* 滑らかなアコーディオン（折りたたみ）アニメーション */
+    .accordion-grid {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .accordion-grid.open {
+      grid-template-rows: 1fr;
+    }
+
+    .accordion-inner {
+      overflow: hidden;
+    }
+
+    /* アコーディオン矢印アイコンの回転 */
+    .chevron-icon {
+      transition: transform 0.3s ease;
+    }
+    .chevron-icon.rotate {
+      transform: rotate(180deg);
+    }
+
+    /* サイドドロワーメニューの背景オーバーレイ */
+    .drawer-overlay {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .drawer-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* サイドドロワー本体のスライド移動 */
+    .drawer-panel {
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .drawer-panel.active {
+      transform: translateX(0);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-white">
+
+  <!-- Top Fixed Header -->
+  <header class="fixed top-0 left-0 right-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 md:px-8 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">⏳</span>
+      <h1 class="text-base md:text-lg font-bold text-slate-100 tracking-wide">リアルタイム残り時間バー</h1>
+    </div>
+
+    <!-- 右上ハンバーガーメニューボタン -->
+    <button id="menu-btn" onclick="toggleMenu()" class="flex items-center gap-2 bg-slate-800/90 hover:bg-slate-700/80 text-slate-200 px-3.5 py-1.5 rounded-xl border border-slate-700/70 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500/50">
+      <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+      <span class="text-xs font-bold tracking-wider uppercase">MENU</span>
+    </button>
+  </header>
+
+  <!-- Drawer Menu Backdrop -->
+  <div id="drawer-overlay" onclick="toggleMenu()" class="drawer-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-50"></div>
+
+  <!-- Drawer Menu Panel -->
+  <aside id="drawer-panel" class="drawer-panel fixed top-0 right-0 h-full w-full max-w-xs md:max-w-sm bg-[#0d1527] border-l border-slate-800 text-slate-100 z-50 flex flex-col justify-between shadow-2xl">
+    
+    <!-- Drawer Header -->
+    <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <span class="font-bold text-lg text-slate-100 tracking-wide">メニュー</span>
+      </div>
+      <button onclick="toggleMenu()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Content (Scrollable) -->
+    <div class="p-4 space-y-4 overflow-y-auto flex-grow custom-scrollbar">
+      
+      <!-- ホームページへ ボタン -->
+      <a href="index.html" class="flex items-center gap-3 w-full bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 text-slate-100 px-4 py-3 rounded-2xl font-bold transition-all duration-200 hover:border-sky-500/50 group">
+        <svg class="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+        </svg>
+        <span>ホームページへ</span>
+      </a>
+
+      <!-- 折りたたみ式 便利ツール -->
+      <div class="border border-slate-800/90 rounded-2xl bg-slate-900/50 overflow-hidden">
+        <button onclick="toggleAccordion()" class="w-full flex items-center justify-between p-4 text-left font-bold text-slate-200 hover:bg-slate-800/40 transition-colors">
+          <div class="flex items-center gap-3">
+            <!-- フラスコアイコン -->
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.6 15.12a2 2 0 00-1.022.547l-1.07 1.07A2 2 0 003 18.16V19a2 2 0 002 2h14a2 2 0 002-2v-.84a2 2 0 00-.508-1.412l-1.07-1.07zM12 3v8"></path>
+            </svg>
+            <span>便利ツール</span>
+          </div>
+          <svg id="chevron-icon" class="chevron-icon w-4 h-4 text-slate-400 rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+
+        <!-- 折りたたみコンテンツ（アコーディオン） -->
+        <div id="accordion-content" class="accordion-grid open">
+          <div class="accordion-inner border-t border-slate-800/80 bg-slate-950/40 divide-y divide-slate-800/50">
+            <!-- 当ページ「残り時間バー」を除いた9個のツール -->
+            <a href="char-count.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">文字数カウント</a>
+            <a href="station-gacha.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">首都圏 ぶらり途中下車駅ガチャ</a>
+            <a href="earthquake.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">リアルタイム地震情報</a>
+            <a href="omikuji.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">おみくじ</a>
+            <a href="timer.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">タイマー・ストップウォッチ</a>
+            <a href="radix.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">進数変換</a>
+            <a href="markdown.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">Markdownリアルタイムエディタ</a>
+            <a href="qrcode.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">QRコード作成・読み取り器</a>
+            <a href="password.html" class="block px-4 py-3 text-sm text-slate-300 hover:text-sky-400 hover:bg-slate-800/50 transition-colors pl-11">パスワード生成</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-slate-800/80 bg-slate-950/60 text-center">
+      <span class="text-xs font-semibold text-slate-400 tracking-wider">さむさむ Official Website</span>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex-grow pt-20 md:pt-24">
+    <section class="space-y-6">
+      <div class="glass-card rounded-3xl p-6 md:p-8 border border-slate-800/80 shadow-2xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+              <span>⏳ リアルタイム残り時間・プログレスバー</span>
+            </h2>
+            <p class="text-slate-400 text-sm mt-1">今年・今月・今日の経過状況と、目標年月日までのカウントダウン</p>
+          </div>
+
+          <div class="flex items-center gap-2 bg-slate-900/90 p-2 rounded-xl border border-slate-800 shrink-0">
+            <label for="timeleft-unit" class="text-xs font-semibold text-slate-400 shrink-0">表示設定:</label>
+            <select id="timeleft-unit" onchange="renderTimeLeft()" class="bg-slate-800 text-xs font-semibold text-sky-300 rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:border-sky-500">
+              <option value="auto" selected>標準 (自動: 年/月/日/時/分/秒)</option>
+              <option value="month">月のみ (例: 4.2ヶ月)</option>
+              <option value="day">日のみ (例: 120日)</option>
+              <option value="hour">時間のみ (例: 2,880時間)</option>
+              <option value="minute">分のみ (例: 172,800分)</option>
+              <option value="second">秒のみ (例: 10,368,000秒)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Canvas: Progress Bars -->
+        <div class="bg-slate-900/90 rounded-2xl p-4 md:p-6 border border-slate-800 mb-8 flex justify-center overflow-x-auto">
+          <canvas id="canvas-timeleft" width="680" height="240" class="max-w-full h-auto"></canvas>
+        </div>
+
+        <!-- Custom Target Countdown Config -->
+        <div class="glass-card p-6 rounded-2xl border border-slate-700/60 max-w-3xl mx-auto space-y-4">
+          <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span>🎯 好きな年月日までのカウントダウン</span>
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">イベント名</label>
+              <input type="text" id="target-title" value="次の旅行・目標日" placeholder="例: 夏季休暇" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-400 mb-1">目標日時 (過去は選択できません)</label>
+              <input type="datetime-local" id="target-datetime" onchange="updateCustomTarget()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500">
+            </div>
+          </div>
+
+          <div id="custom-target-result" class="mt-4 p-4 bg-slate-900 rounded-xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span id="target-display-title" class="text-sm font-semibold text-sky-400">目標日 まで</span>
+            <span id="target-display-time" class="font-mono text-base md:text-lg font-bold text-emerald-400">---</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Page Footer -->
+  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400">
+    &copy; 2026 さむさむ All rights reserved.
+  </footer>
+
+  <script>
+    // Menu & Accordion UI Logic
+    function toggleMenu() {
+      const overlay = document.getElementById('drawer-overlay');
+      const panel = document.getElementById('drawer-panel');
+      overlay.classList.toggle('active');
+      panel.classList.toggle('active');
+    }
+
+    function toggleAccordion() {
+      const content = document.getElementById('accordion-content');
+      const chevron = document.getElementById('chevron-icon');
+      content.classList.toggle('open');
+      chevron.classList.toggle('rotate');
+    }
+
+    // Canvas Countdown Logic
+    const canvasTimeLeft = document.getElementById('canvas-timeleft');
+    const ctxTimeLeft = canvasTimeLeft.getContext('2d');
+
+    function initCustomTargetPicker() {
+      const targetInput = document.getElementById('target-datetime');
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const minIso = now.toISOString().slice(0, 16);
+      targetInput.min = minIso;
+
+      const defaultTarget = new Date();
+      defaultTarget.setDate(defaultTarget.getDate() + 30);
+      defaultTarget.setMinutes(defaultTarget.getMinutes() - defaultTarget.getTimezoneOffset());
+      targetInput.value = defaultTarget.toISOString().slice(0, 16);
+    }
+
+    function calculateDetailedTimeDiff(fromDate, toDate) {
+      if (toDate <= fromDate) return null;
+
+      let y1 = fromDate.getFullYear(), m1 = fromDate.getMonth(), d1 = fromDate.getDate();
+      let h1 = fromDate.getHours(), min1 = fromDate.getMinutes(), s1 = fromDate.getSeconds();
+
+      let y2 = toDate.getFullYear(), m2 = toDate.getMonth(), d2 = toDate.getDate();
+      let h2 = toDate.getHours(), min2 = toDate.getMinutes(), s2 = toDate.getSeconds();
+
+      let years = y2 - y1;
+      let months = m2 - m1;
+      let days = d2 - d1;
+      let hours = h2 - h1;
+      let minutes = min2 - min1;
+      let seconds = s2 - s1;
+
+      if (seconds < 0) {
+        seconds += 60;
+        minutes--;
+      }
+      if (minutes < 0) {
+        minutes += 60;
+        hours--;
+      }
+      if (hours < 0) {
+        hours += 24;
+        days--;
+      }
+      if (days < 0) {
+        const prevMonthLastDay = new Date(y2, m2, 0).getDate();
+        days += prevMonthLastDay;
+        months--;
+      }
+      if (months < 0) {
+        months += 12;
+        years--;
+      }
+
+      return { years, months, days, hours, minutes, seconds };
+    }
+
+    function formatTimeDifference(fromDate, toDate, unit = 'auto') {
+      const diffMs = toDate - fromDate;
+      if (diffMs <= 0) return "期限終了";
+
+      if (unit === 'second') {
+        const seconds = Math.floor(diffMs / 1000);
+        return `残り ${seconds.toLocaleString()} 秒`;
+      }
+      if (unit === 'minute') {
+        const minutes = Math.floor(diffMs / (1000 * 60));
+        return `残り ${minutes.toLocaleString()} 分`;
+      }
+      if (unit === 'hour') {
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        return `残り ${hours.toLocaleString()} 時間`;
+      }
+      if (unit === 'day') {
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        return `残り ${days.toLocaleString()} 日`;
+      }
+      if (unit === 'month') {
+        const days = diffMs / (1000 * 60 * 60 * 24);
+        const months = (days / 30.4375).toFixed(1);
+        return `残り 約 ${months} ヶ月`;
+      }
+
+      const diff = calculateDetailedTimeDiff(fromDate, toDate);
+      if (!diff) return "期限終了";
+
+      const parts = [
+        { val: diff.years, unit: "年" },
+        { val: diff.months, unit: "月" },
+        { val: diff.days, unit: "日" },
+        { val: diff.hours, unit: "時" },
+        { val: diff.minutes, unit: "分" },
+        { val: diff.seconds, unit: "秒" }
+      ];
+
+      const firstNonZeroIndex = parts.findIndex(p => p.val > 0);
+
+      if (firstNonZeroIndex === -1) {
+        return "残り 0秒";
+      }
+
+      const formatted = parts.slice(firstNonZeroIndex).map(p => `${p.val}${p.unit}`).join("");
+      return `残り ${formatted}`;
+    }
+
+    function renderTimeLeft() {
+      const now = new Date();
+      const unitEl = document.getElementById('timeleft-unit');
+      const unit = unitEl ? unitEl.value : 'auto';
+
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const endOfYear = new Date(now.getFullYear() + 1, 0, 1);
+      const yearPct = (now - startOfYear) / (endOfYear - startOfYear);
+
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const monthPct = (now - startOfMonth) / (endOfMonth - startOfMonth);
+
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const dayPct = (now - startOfDay) / (endOfDay - startOfDay);
+
+      const w = canvasTimeLeft.width;
+      const h = canvasTimeLeft.height;
+      ctxTimeLeft.clearRect(0, 0, w, h);
+
+      const bars = [
+        { title: `今年 (${now.getFullYear()}年)`, pct: yearPct, endDate: endOfYear, color: '#38bdf8' },
+        { title: `今月 (${now.getMonth() + 1}月)`, pct: monthPct, endDate: endOfMonth, color: '#34d399' },
+        { title: `今日 (${now.getDate()}日)`, pct: dayPct, endDate: endOfDay, color: '#f59e0b' },
+      ];
+
+      bars.forEach((bar, idx) => {
+        const y = 25 + idx * 70;
+        
+        ctxTimeLeft.fillStyle = '#cbd5e1';
+        ctxTimeLeft.font = 'bold 13px "Noto Sans JP", sans-serif';
+        ctxTimeLeft.textAlign = 'left';
+        ctxTimeLeft.fillText(bar.title, 10, y);
+
+        ctxTimeLeft.textAlign = 'right';
+        ctxTimeLeft.fillStyle = bar.color;
+        const timeLeftStr = formatTimeDifference(now, bar.endDate, unit);
+        ctxTimeLeft.fillText(`${(bar.pct * 100).toFixed(1)}% 経過  |  ${timeLeftStr}`, w - 10, y);
+
+        ctxTimeLeft.fillStyle = '#1e293b';
+        ctxTimeLeft.beginPath();
+        ctxTimeLeft.roundRect(10, y + 10, w - 20, 22, 10);
+        ctxTimeLeft.fill();
+
+        const fillW = Math.max(12, (w - 20) * bar.pct);
+        ctxTimeLeft.fillStyle = bar.color;
+        ctxTimeLeft.beginPath();
+        ctxTimeLeft.roundRect(10, y + 10, fillW, 22, 10);
+        ctxTimeLeft.fill();
+      });
+
+      updateCustomTarget();
+    }
+
+    function updateCustomTarget() {
+      const title = document.getElementById('target-title').value || "目標日";
+      const datetimeVal = document.getElementById('target-datetime').value;
+      const unitEl = document.getElementById('timeleft-unit');
+      const unit = unitEl ? unitEl.value : 'auto';
+
+      document.getElementById('target-display-title').innerText = `${title} まで`;
+
+      if (!datetimeVal) {
+        document.getElementById('target-display-time').innerText = "日時を指定してください";
+        return;
+      }
+
+      const targetDate = new Date(datetimeVal);
+      const now = new Date();
+
+      if (targetDate <= now) {
+        document.getElementById('target-display-time').innerText = "過去の日時は選択できません";
+        document.getElementById('target-display-time').className = "font-mono text-sm font-bold text-red-400";
+        return;
+      }
+
+      document.getElementById('target-display-time').className = "font-mono text-base md:text-lg font-bold text-emerald-400";
+      document.getElementById('target-display-time').innerText = formatTimeDifference(now, targetDate, unit);
+    }
+
+    window.onload = function() {
+      initCustomTargetPicker();
+      renderTimeLeft();
+      setInterval(renderTimeLeft, 1000);
+    };
+  </script>
+</body>
+</html>

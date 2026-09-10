@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首都圏 ぶらり途中下車駅ガチャ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'Noto Sans JP', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #0b1329; color: #f8fafc; }
+    .glass-card { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    
+    /* Accordion & Drawer Smooth Transition Styles */
+    .drawer-overlay {
+      transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    }
+    .drawer-content {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .accordion-content {
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-white relative overflow-x-hidden">
+
+  <!-- Top Header Navigation Bar -->
+  <header class="w-full bg-slate-900/60 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🚃</span>
+        <h1 class="text-base md:text-lg font-bold text-slate-100 tracking-wide">首都圏 駅ガチャ</h1>
+      </div>
+
+      <!-- Hamburger Menu Trigger Button -->
+      <button onclick="toggleMenu(true)" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-slate-200 hover:text-white transition active:scale-95">
+        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <span class="text-sm font-bold tracking-wider">MENU</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Hamburger Drawer Overlay & Sidebar -->
+  <div id="drawer-backdrop" onclick="toggleMenu(false)" class="drawer-overlay fixed inset-0 bg-black/60 backdrop-blur-sm z-50 opacity-0 invisible"></div>
+
+  <aside id="drawer-menu" class="drawer-content fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#0c152e] border-l border-slate-800/90 text-slate-100 shadow-2xl z-50 transform translate-x-full flex flex-col justify-between overflow-hidden">
+    <!-- Drawer Header -->
+    <div class="p-4 border-b border-slate-800/80 flex items-center justify-between bg-[#0e1836]">
+      <div class="flex items-center gap-2.5">
+        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <span class="font-bold text-base text-slate-100 tracking-wide">メニュー</span>
+      </div>
+      <button onclick="toggleMenu(false)" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Main List Scroll Area -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-4">
+      <!-- Homepage Link Button -->
+      <a href="index.html" class="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-r from-slate-800/90 to-slate-800/50 hover:from-slate-700/90 hover:to-slate-700/60 border border-slate-700/70 text-slate-100 font-bold text-sm transition shadow-sm hover:shadow-sky-500/10 group">
+        <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400 group-hover:bg-sky-500/20 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+          </svg>
+        </div>
+        <span>ホームページへ</span>
+      </a>
+
+      <!-- Collapsible Tools Accordion -->
+      <div class="rounded-2xl border border-slate-700/60 bg-[#131d38] overflow-hidden">
+        <button onclick="toggleAccordion()" class="w-full px-4 py-3.5 flex items-center justify-between font-bold text-slate-100 hover:bg-slate-800/40 transition">
+          <div class="flex items-center gap-3 text-emerald-400">
+            <div class="p-1.5 rounded-lg bg-emerald-500/10">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+              </svg>
+            </div>
+            <span class="text-sm font-bold text-slate-100">便利ツール</span>
+          </div>
+          <svg id="accordion-arrow" class="w-4 h-4 text-slate-400 transition-transform duration-300 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+
+        <!-- Tool Items (Excludes current page: station-gacha.html) -->
+        <div id="accordion-body" class="accordion-content max-h-[1000px] opacity-100 overflow-hidden bg-[#0d162d]">
+          <div class="flex flex-col border-t border-slate-800/80 text-xs font-medium">
+            <a href="char-count.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>文字数カウント</span>
+            </a>
+            <a href="earthquake.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>リアルタイム地震情報</span>
+            </a>
+            <a href="omikuji.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>おみくじ</span>
+            </a>
+            <a href="timer.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>タイマー・ストップウォッチ</span>
+            </a>
+            <a href="radix.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>進数変換</span>
+            </a>
+            <a href="markdown.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>Markdownリアルタイムエディタ</span>
+            </a>
+            <a href="qrcode.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>QRコード作成・読み取り器</span>
+            </a>
+            <a href="time-bar.html" class="px-5 py-3 hover:bg-slate-800/60 transition border-b border-slate-800/40 text-slate-300 hover:text-white flex items-center justify-between">
+              <span>残り時間バー</span>
+            </a>
+            <a href="password.html" class="px-5 py-3 hover:bg-slate-800/60 transition text-slate-300 hover:text-white flex items-center justify-between">
+              <span>パスワード生成</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 border-t border-slate-800/80 bg-[#080d1b] text-center">
+      <span class="text-xs font-bold text-slate-400 tracking-wider">さむさむ Official Website</span>
+    </div>
+  </aside>
+
+  <!-- Main Tool Body -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex-grow">
+    <section class="space-y-6">
+      <div class="glass-card rounded-3xl p-6 md:p-8 border border-slate-800 relative overflow-hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+              <span>🚃 首都圏 ぶらり途中下車駅ガチャ</span>
+            </h2>
+            <p class="text-slate-400 text-sm mt-1">東京・神奈川・埼玉・千葉・山梨の90駅以上の豊富な駅データベースから行先を決定！</p>
+          </div>
+
+          <!-- Prefectures Filters -->
+          <div class="flex flex-wrap gap-2 text-xs">
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+              <input type="checkbox" id="pref-tokyo" checked onchange="filterStations()" class="accent-sky-500 rounded"> 東京都
+            </label>
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+              <input type="checkbox" id="pref-kanagawa" checked onchange="filterStations()" class="accent-sky-500 rounded"> 神奈川県
+            </label>
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+              <input type="checkbox" id="pref-saitama" checked onchange="filterStations()" class="accent-sky-500 rounded"> 埼玉県
+            </label>
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+              <input type="checkbox" id="pref-chiba" checked onchange="filterStations()" class="accent-sky-500 rounded"> 千葉県
+            </label>
+            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-1.5">
+              <input type="checkbox" id="pref-yamanashi" checked onchange="filterStations()" class="accent-sky-500 rounded"> 山梨県
+            </label>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+          <!-- Canvas: Station Signboard -->
+          <div class="lg:col-span-2 flex flex-col items-center justify-center bg-slate-900/90 rounded-2xl p-6 border border-slate-800 relative shadow-inner min-h-[380px]">
+            <canvas id="canvas-station" width="480" height="320" class="max-w-full h-auto rounded-xl"></canvas>
+            <div class="mt-6 flex gap-4">
+              <button onclick="spinStationGacha()" id="btn-spin-station" class="px-8 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold rounded-2xl shadow-lg shadow-sky-500/30 transition hover:scale-105 active:scale-95 text-base flex items-center gap-2">
+                <span>🎯 ガチャを回す！</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Result Panel -->
+          <div class="glass-card p-6 rounded-2xl border border-slate-700/50 flex flex-col justify-between h-full min-h-[320px]">
+            <div>
+              <span class="text-xs uppercase tracking-wider font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-full">Destination</span>
+              <div class="mt-4">
+                <div id="station-pref-badge" class="text-sm font-semibold text-amber-400 mb-1">ボタンを押してください</div>
+                <h3 id="station-result-name" class="text-3xl font-extrabold text-white tracking-tight">??? 駅</h3>
+                <p id="station-result-line" class="text-sm text-slate-400 mt-2">ふらっと途中下車の旅をはじめましょう。</p>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-slate-800 space-y-3">
+              <div class="text-xs text-slate-400 flex justify-between">
+                <span>現在の抽出対象駅数:</span>
+                <span id="station-count-display" class="font-bold text-sky-400">0 駅</span>
+              </div>
+              <button onclick="searchStationMap()" id="btn-map-search" disabled class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-xs font-semibold text-slate-200 rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+                <span>🗺️ Google Mapsで駅周辺を見る</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Page Footer -->
+  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400">
+    © 2026 さむさむ All rights reserved.
+  </footer>
+
+  <!-- JS Implementation -->
+  <script>
+    let isAccordionOpen = true;
+
+    function toggleMenu(open) {
+      const backdrop = document.getElementById('drawer-backdrop');
+      const drawer = document.getElementById('drawer-menu');
+      if (open) {
+        backdrop.classList.remove('opacity-0', 'invisible');
+        backdrop.classList.add('opacity-100');
+        drawer.classList.remove('translate-x-full');
+        document.body.classList.add('overflow-hidden');
+      } else {
+        backdrop.classList.remove('opacity-100');
+        backdrop.classList.add('opacity-0', 'invisible');
+        drawer.classList.add('translate-x-full');
+        document.body.classList.remove('overflow-hidden');
+      }
+    }
+
+    function toggleAccordion() {
+      const accordionBody = document.getElementById('accordion-body');
+      const arrow = document.getElementById('accordion-arrow');
+
+      if (isAccordionOpen) {
+        accordionBody.style.maxHeight = '0px';
+        accordionBody.style.opacity = '0';
+        arrow.classList.remove('rotate-180');
+        isAccordionOpen = false;
+      } else {
+        accordionBody.style.maxHeight = accordionBody.scrollHeight + 'px';
+        accordionBody.style.opacity = '1';
+        arrow.classList.add('rotate-180');
+        isAccordionOpen = true;
+      }
+    }
+
+    const STATIONS_DATA = [
+      // 東京都
+      { name: "新宿", pref: "東京都", line: "JR山手線・中央線 / 東京メトロ" },
+      { name: "渋谷", pref: "東京都", line: "JR山手線 / 東急東横線" },
+      { name: "東京", pref: "東京都", line: "JR各線 / 新幹線 / 丸ノ内線" },
+      { name: "品川", pref: "東京都", line: "JR東海道線 / 京急本線" },
+      { name: "池袋", pref: "東京都", line: "JR山手線 / 西武池袋線" },
+      { name: "上野", pref: "東京都", line: "JR各線 / 東京メトロ銀座線" },
+      { name: "秋葉原", pref: "東京都", line: "JR山手線・京浜東北線 / 日比谷線" },
+      { name: "八王子", pref: "東京都", line: "JR中央線 / 横浜線 / 八高線" },
+      { name: "立川", pref: "東京都", line: "JR中央線 / 青梅線 / 南武線" },
+      { name: "吉祥寺", pref: "東京都", line: "JR中央線 / 京王井の頭線" },
+      { name: "高尾", pref: "東京都", line: "JR中央線 / 京王高尾線" },
+      { name: "奥多摩", pref: "東京都", line: "JR青梅線" },
+      { name: "下北沢", pref: "東京都", line: "小田急小田原線 / 京王井の頭線" },
+      { name: "中野", pref: "東京都", line: "JR中央線 / 東京メトロ東西線" },
+      { name: "恵比寿", pref: "東京都", line: "JR山手線 / 東京メトロ日比谷線" },
+      { name: "浅草", pref: "東京都", line: "東武スカイツリーライン / 都営浅草線" },
+      { name: "銀座", pref: "東京都", line: "東京メトロ銀座線・丸ノ内線" },
+      { name: "日暮里", pref: "東京都", line: "JR山手線 / 京成本線" },
+      { name: "北千住", pref: "東京都", line: "JR常磐線 / 東京メトロ千代田線" },
+      { name: "錦糸町", pref: "東京都", line: "JR総武線 / 東京メトロ半蔵門線" },
+      { name: "御茶ノ水", pref: "東京都", line: "JR中央線・総武線" },
+      { name: "町田", pref: "東京都", line: "JR横浜線 / 小田急小田原線" },
+      { name: "府中", pref: "東京都", line: "京王線" },
+      { name: "多摩センター", pref: "東京都", line: "京王相模原線 / 小田急多摩線" },
+
+      // 神奈川県
+      { name: "横浜", pref: "神奈川県", line: "JR東海道線 / 東急東横線 / 相鉄線" },
+      { name: "川崎", pref: "神奈川県", line: "JR東海道線 / 京浜東北線 / 南武線" },
+      { name: "鎌倉", pref: "神奈川県", line: "JR横須賀線 / 江ノ島電鉄" },
+      { name: "箱根湯本", pref: "神奈川県", line: "箱根登山電車" },
+      { name: "小田原", pref: "神奈川県", line: "JR東海道線 / 小田急小田原線" },
+      { name: "横須賀", pref: "神奈川県", line: "JR横須賀線" },
+      { name: "藤沢", pref: "神奈川県", line: "JR東海道線 / 小田急江ノ島線" },
+      { name: "江ノ島", pref: "神奈川県", line: "江ノ島電鉄" },
+      { name: "武蔵小杉", pref: "神奈川県", line: "JR南武線・横須賀線 / 東急東横線" },
+      { name: "溝の口", pref: "神奈川県", line: "JR南武線 / 東急田園都市線" },
+      { name: "桜木町", pref: "神奈川県", line: "JR根岸線 / 横浜市営地下鉄" },
+      { name: "新横浜", pref: "神奈川県", line: "JR東海道新幹線 / 横浜線" },
+      { name: "茅ヶ崎", pref: "神奈川県", line: "JR東海道線 / 相模線" },
+      { name: "平塚", pref: "神奈川県", line: "JR東海道線" },
+      { name: "海老名", pref: "神奈川県", line: "小田急小田原線 / 相鉄本線" },
+      { name: "橋本", pref: "神奈川県", line: "JR横浜線・相模線 / 京王相模原線" },
+
+      // 埼玉県
+      { name: "大宮", pref: "埼玉県", line: "JR京浜東北線・宇都宮線・高崎線" },
+      { name: "浦和", pref: "埼玉県", line: "JR京浜東北線・湘南新宿ライン" },
+      { name: "川越", pref: "埼玉県", line: "JR川越線 / 東武東上線" },
+      { name: "秩父", pref: "埼玉県", line: "秩父鉄道" },
+      { name: "所沢", pref: "埼玉県", line: "西武池袋線 / 西武新宿線" },
+      { name: "越谷レイクタウン", pref: "埼玉県", line: "JR武蔵野線" },
+      { name: "熊谷", pref: "埼玉県", line: "JR高崎線 / 上越新幹線" },
+      { name: "春日部", pref: "埼玉県", line: "東武スカイツリーライン" },
+      { name: "和光市", pref: "埼玉県", line: "東武東上線 / 東京メトロ副都心線" },
+      { name: "川口", pref: "埼玉県", line: "JR京浜東北線" },
+      { name: "長瀞", pref: "埼玉県", line: "秩父鉄道" },
+      { name: "飯能", pref: "埼玉県", line: "西武池袋線" },
+
+      // 千葉県
+      { name: "千葉", pref: "千葉県", line: "JR総武本線 / 外房線 / 内房線" },
+      { name: "船橋", pref: "千葉県", line: "JR総武線 / 東武アーバンパークライン" },
+      { name: "柏", pref: "千葉県", line: "JR常磐線 / 東武アーバンパークライン" },
+      { name: "木更津", pref: "千葉県", line: "JR内房線 / 久留里線" },
+      { name: "銚子", pref: "千葉県", line: "JR総武本線 / 銚子電気鉄道" },
+      { name: "館山", pref: "千葉県", line: "JR内房線" },
+      { name: "成田", pref: "千葉県", line: "JR成田線 / 京成本線" },
+      { name: "舞浜", pref: "千葉県", line: "JR京葉線" },
+      { name: "海浜幕張", pref: "千葉県", line: "JR京葉線" },
+      { name: "松戸", pref: "千葉県", line: "JR常磐線 / 新京成電鉄" },
+      { name: "津田沼", pref: "千葉県", line: "JR総武線" },
+      { name: "勝浦", pref: "千葉県", line: "JR外房線" },
+
+      // 山梨県
+      { name: "甲府", pref: "山梨県", line: "JR中央本線 / 身延線" },
+      { name: "富士山", pref: "山梨県", line: "富士山麓電気鉄道富士急行線" },
+      { name: "河口湖", pref: "山梨県", line: "富士山麓電気鉄道富士急行線" },
+      { name: "大月", pref: "山梨県", line: "JR中央本線 / 富士急行線" },
+      { name: "勝沼ぶどう郷", pref: "山梨県", line: "JR中央本線" },
+      { name: "清里", pref: "山梨県", line: "JR小海線" },
+      { name: "石和温泉", pref: "山梨県", line: "JR中央本線" },
+      { name: "韮崎", pref: "山梨県", line: "JR中央本線" },
+      { name: "小淵沢", pref: "山梨県", line: "JR中央本線 / 小海線" },
+      { name: "下吉田", pref: "山梨県", line: "富士急行線" }
+    ];
+
+    let currentFilteredStations = [...STATIONS_DATA];
+    let selectedStationResult = null;
+    let isSpinningStation = false;
+
+    const canvasStation = document.getElementById('canvas-station');
+    const ctxStation = canvasStation.getContext('2d');
+
+    function filterStations() {
+      const showTokyo = document.getElementById('pref-tokyo').checked;
+      const showKanagawa = document.getElementById('pref-kanagawa').checked;
+      const showSaitama = document.getElementById('pref-saitama').checked;
+      const showChiba = document.getElementById('pref-chiba').checked;
+      const showYamanashi = document.getElementById('pref-yamanashi').checked;
+
+      currentFilteredStations = STATIONS_DATA.filter(st => {
+        if (st.pref === "東京都" && !showTokyo) return false;
+        if (st.pref === "神奈川県" && !showKanagawa) return false;
+        if (st.pref === "埼玉県" && !showSaitama) return false;
+        if (st.pref === "千葉県" && !showChiba) return false;
+        if (st.pref === "山梨県" && !showYamanashi) return false;
+        return true;
+      });
+
+      document.getElementById('station-count-display').innerText = `${currentFilteredStations.length} 駅`;
+      drawStationCanvas();
+    }
+
+    function drawStationCanvas() {
+      const width = canvasStation.width;
+      const height = canvasStation.height;
+      const cx = width / 2;
+      const cy = height / 2;
+
+      ctxStation.clearRect(0, 0, width, height);
+
+      ctxStation.save();
+      ctxStation.translate(cx, cy);
+
+      ctxStation.fillStyle = '#1e293b';
+      ctxStation.beginPath();
+      ctxStation.roundRect(-200, -110, 400, 220, 20);
+      ctxStation.fill();
+      ctxStation.strokeStyle = '#38bdf8';
+      ctxStation.lineWidth = 4;
+      ctxStation.stroke();
+
+      ctxStation.fillStyle = '#0284c7';
+      ctxStation.fillRect(-180, -90, 360, 16);
+
+      ctxStation.fillStyle = '#f8fafc';
+      ctxStation.font = 'bold 32px "Noto Sans JP", sans-serif';
+      ctxStation.textAlign = 'center';
+      ctxStation.textBaseline = 'middle';
+
+      if (isSpinningStation) {
+        const randIndex = Math.floor(Math.random() * (currentFilteredStations.length || 1));
+        const tempName = currentFilteredStations[randIndex] ? currentFilteredStations[randIndex].name : "???";
+        ctxStation.fillText(tempName + " 駅", 0, 0);
+      } else if (selectedStationResult) {
+        ctxStation.fillText(selectedStationResult.name + " 駅", 0, -10);
+        ctxStation.font = '14px "Noto Sans JP", sans-serif';
+        ctxStation.fillStyle = '#94a3b8';
+        ctxStation.fillText(selectedStationResult.line, 0, 40);
+      } else {
+        ctxStation.fillText("ぶらり途中下車", 0, 0);
+      }
+
+      ctxStation.restore();
+    }
+
+    function spinStationGacha() {
+      if (isSpinningStation) return;
+      if (currentFilteredStations.length === 0) return;
+
+      isSpinningStation = true;
+      let counter = 0;
+      const maxSpins = 30;
+      const interval = setInterval(() => {
+        counter++;
+        drawStationCanvas();
+
+        if (counter >= maxSpins) {
+          clearInterval(interval);
+          isSpinningStation = false;
+
+          const chosen = currentFilteredStations[Math.floor(Math.random() * currentFilteredStations.length)];
+          selectedStationResult = chosen;
+
+          document.getElementById('station-pref-badge').innerText = chosen.pref;
+          document.getElementById('station-result-name').innerText = `${chosen.name} 駅`;
+          document.getElementById('station-result-line').innerText = `路線: ${chosen.line}`;
+          
+          document.getElementById('btn-map-search').disabled = false;
+          drawStationCanvas();
+        }
+      }, 50);
+    }
+
+    function searchStationMap() {
+      if (!selectedStationResult) return;
+      const query = encodeURIComponent(`${selectedStationResult.pref} ${selectedStationResult.name}駅`);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    }
+
+    window.onload = function() {
+      filterStations();
+    };
+  </script>
+</body>
+</html>

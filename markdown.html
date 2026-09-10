@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown リアルタイムエディタ</title>
+    
+    <!-- Tailwind CSS (with Typography plugin for Markdown styling) -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        menu: {
+                            bg: '#171a2a', // メニューのメイン背景色
+                            item: '#262b40', // メニュー項目の背景色
+                            border: '#333954', // ボーダー色
+                            text: '#e2e8f0', // テキスト色
+                            hover: '#313752' // ホバー時の色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 全体のレイアウト設定 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* 全体のスクロールを防ぎ、内部でスクロールさせる */
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        /* スクロールバーのカスタマイズ */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ツールバーのスクロールバーを隠す */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* アコーディオンのアニメーション用CSS */
+        .accordion-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease-in-out;
+        }
+        .accordion-content.open {
+            grid-template-rows: 1fr;
+        }
+        .accordion-inner {
+            overflow: hidden;
+        }
+        
+        /* 矢印アイコンの回転アニメーション */
+        .arrow-icon {
+            transition: transform 0.3s ease;
+        }
+        .arrow-icon.open {
+            transform: rotate(180deg);
+        }
+
+        /* サイドバーのアニメーション */
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        /* メッセージトーストのアニメーション */
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, 20px); }
+            10% { opacity: 1; transform: translate(-50%, 0); }
+            90% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -20px); }
+        }
+        .toast-animate {
+            animation: fadeInOut 2.5s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col h-full text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm z-10 relative px-4 py-3 flex justify-between items-center shrink-0">
+        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="fa-brands fa-markdown text-blue-600"></i>
+            Markdown Editor
+        </h1>
+        
+        <div class="flex items-center gap-4">
+            <!-- アクションボタン (PCでは表示、スマホではアイコンのみ等も可能ですが今回は統一) -->
+            <div class="hidden sm:flex gap-2">
+                <button onclick="copyHtml()" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded text-sm font-semibold transition flex items-center gap-1 border border-blue-200">
+                    <i class="fa-regular fa-copy"></i> HTMLコピー
+                </button>
+                <button onclick="downloadHtml()" class="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1.5 rounded text-sm font-semibold transition flex items-center gap-1 shadow-sm">
+                    <i class="fa-solid fa-download"></i> 保存
+                </button>
+            </div>
+            
+            <!-- ハンバーガーメニューボタン -->
+            <button onclick="toggleMenu()" class="text-gray-600 hover:text-gray-900 focus:outline-none p-2 rounded-md hover:bg-gray-100 transition">
+                <div class="flex flex-col items-center gap-1">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                    <span class="text-[10px] font-bold leading-none">MENU</span>
+                </div>
+            </button>
+        </div>
+    </header>
+    
+    <!-- スマホ用アクションボタン (画面が狭い場合用) -->
+    <div class="sm:hidden flex bg-white px-4 py-2 border-t gap-2 shrink-0">
+        <button onclick="copyHtml()" class="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 py-2 rounded text-sm font-semibold transition flex justify-center items-center gap-1 border border-blue-200">
+            <i class="fa-regular fa-copy"></i> コピー
+        </button>
+        <button onclick="downloadHtml()" class="flex-1 bg-blue-600 text-white hover:bg-blue-700 py-2 rounded text-sm font-semibold transition flex justify-center items-center gap-1 shadow-sm">
+            <i class="fa-solid fa-download"></i> 保存
+        </button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        <!-- Editor Area (Left/Top) -->
+        <div class="w-full md:w-1/2 h-1/2 md:h-full flex flex-col border-b md:border-b-0 md:border-r border-gray-300 bg-white">
+            <div class="bg-gray-100 text-gray-500 text-xs font-bold uppercase px-4 py-2 border-b border-gray-200 shrink-0">
+                Markdown 入力
+            </div>
+            
+            <!-- ツールバー -->
+            <div class="flex items-center gap-1 p-2 bg-gray-50 border-b border-gray-200 overflow-x-auto shrink-0 text-gray-600 hide-scrollbar">
+                <button type="button" onclick="insertMarkdown('bold')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="太字">
+                    <i class="fa-solid fa-bold"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('italic')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="斜体">
+                    <i class="fa-solid fa-italic"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('strike')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="打ち消し線">
+                    <i class="fa-solid fa-strikethrough"></i>
+                </button>
+                <div class="w-px h-5 bg-gray-300 mx-1 shrink-0"></div>
+                <button type="button" onclick="insertMarkdown('heading')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="見出し">
+                    <i class="fa-solid fa-heading"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('quote')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="引用">
+                    <i class="fa-solid fa-quote-right"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('code')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="コード">
+                    <i class="fa-solid fa-code"></i>
+                </button>
+                <div class="w-px h-5 bg-gray-300 mx-1 shrink-0"></div>
+                <button type="button" onclick="insertMarkdown('link')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="リンク">
+                    <i class="fa-solid fa-link"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('image')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="画像">
+                    <i class="fa-regular fa-image"></i>
+                </button>
+                <div class="w-px h-5 bg-gray-300 mx-1 shrink-0"></div>
+                <button type="button" onclick="insertMarkdown('ul')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="箇条書き">
+                    <i class="fa-solid fa-list-ul"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('ol')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="番号付きリスト">
+                    <i class="fa-solid fa-list-ol"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('check')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="タスクリスト">
+                    <i class="fa-solid fa-list-check"></i>
+                </button>
+                <div class="w-px h-5 bg-gray-300 mx-1 shrink-0"></div>
+                <button type="button" onclick="insertMarkdown('table')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="テーブル">
+                    <i class="fa-solid fa-table"></i>
+                </button>
+                <button type="button" onclick="insertMarkdown('hr')" class="flex items-center justify-center w-8 h-8 hover:bg-gray-200 hover:text-blue-600 rounded transition shrink-0" title="水平線">
+                    <i class="fa-solid fa-minus"></i>
+                </button>
+            </div>
+            
+            <textarea id="editor" class="flex-1 w-full p-4 resize-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 bg-white font-mono text-sm leading-relaxed" placeholder="Markdownを入力してください..."></textarea>
+        </div>
+
+        <!-- Preview Area (Right/Bottom) -->
+        <div class="w-full md:w-1/2 h-1/2 md:h-full flex flex-col bg-white">
+            <div class="bg-gray-100 text-gray-500 text-xs font-bold uppercase px-4 py-2 border-b border-gray-200 shrink-0">
+                プレビュー (HTML)
+            </div>
+            <!-- proseクラスでTailwind Typographyを適用し、綺麗なマークダウン表示にする -->
+            <div id="preview" class="flex-1 w-full p-6 overflow-y-auto prose prose-blue max-w-none">
+                <!-- ここにリアルタイムでプレビューが表示されます -->
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="bg-gray-800 text-gray-400 text-center py-2 text-xs shrink-0">
+        &copy; 2026 さむさむ All rights reserved.
+    </footer>
+
+    <!-- Hamburger Menu Overlay -->
+    <div id="menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity opacity-0 backdrop-blur-sm" onclick="toggleMenu()"></div>
+
+    <!-- Hamburger Menu Drawer -->
+    <nav id="sidebar" class="fixed top-0 right-0 h-full w-80 bg-menu-bg z-50 transform translate-x-full flex flex-col shadow-2xl">
+        
+        <!-- メニューヘッダー -->
+        <div class="flex items-center justify-between px-6 py-5 border-b border-menu-border shrink-0">
+            <div class="text-white font-bold text-lg flex items-center gap-2">
+                <i class="fa-solid fa-bars text-blue-400"></i> メニュー
+            </div>
+            <button onclick="toggleMenu()" class="text-gray-400 hover:text-white transition w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <!-- メニューコンテンツ (スクロール可能) -->
+        <div class="flex-1 overflow-y-auto px-4 py-6 flex flex-col gap-4">
+            
+            <!-- ホームページへ -->
+            <a href="index.html" class="bg-menu-item hover:bg-menu-hover text-menu-text rounded-xl p-4 flex items-center gap-3 transition shadow-sm border border-white/5">
+                <i class="fa-solid fa-house text-blue-400 text-lg w-6 text-center"></i>
+                <span class="font-bold text-sm tracking-wide">ホームページへ</span>
+            </a>
+
+            <!-- 便利ツール (アコーディオン) -->
+            <div class="bg-menu-item rounded-xl border border-white/5 overflow-hidden shadow-sm flex flex-col">
+                <button onclick="toggleAccordion()" class="w-full text-left p-4 flex items-center justify-between hover:bg-menu-hover transition group">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-flask text-emerald-400 text-lg w-6 text-center"></i>
+                        <span class="font-bold text-sm text-menu-text tracking-wide">便利ツール</span>
+                    </div>
+                    <i id="accordion-arrow" class="fa-solid fa-chevron-up text-gray-400 text-xs arrow-icon"></i>
+                </button>
+                
+                <div id="accordion-content" class="accordion-content">
+                    <div class="accordion-inner">
+                        <ul class="flex flex-col text-sm text-gray-300">
+                            <!-- 本ページ (Markdownリアルタイムエディタ) は除外 -->
+                            <li><a href="char-count.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">文字数カウント</a></li>
+                            <li><a href="station-gacha.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">首都圏 ぶらり途中下車駅ガチャ</a></li>
+                            <li><a href="earthquake.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">リアルタイム地震情報</a></li>
+                            <li><a href="omikuji.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">おみくじ</a></li>
+                            <li><a href="timer.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">タイマー・ストップウォッチ</a></li>
+                            <li><a href="radix.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">進数変換</a></li>
+                            <li><a href="qrcode.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">QRコード作成・読み取り器</a></li>
+                            <li><a href="time-bar.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">残り時間バー</a></li>
+                            <li><a href="password.html" class="block py-3 px-12 hover:bg-menu-hover hover:text-white transition border-t border-menu-border">パスワード生成</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- メニューフッター -->
+        <div class="p-4 bg-[#0e101a] text-center shrink-0">
+            <span class="text-gray-400 text-xs font-bold tracking-wider">さむさむ Official Website</span>
+        </div>
+    </nav>
+
+    <!-- トースト通知用のコンテナ -->
+    <div id="toast-container" class="fixed top-20 left-1/2 z-50 pointer-events-none"></div>
+
+    <script>
+        // DOM要素の取得
+        const editor = document.getElementById('editor');
+        const preview = document.getElementById('preview');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('menu-overlay');
+        const accordionContent = document.getElementById('accordion-content');
+        const accordionArrow = document.getElementById('accordion-arrow');
+
+        // Marked.js の設定 (改行を<br>に変換するなど)
+        marked.use({
+            breaks: true,
+            gfm: true
+        });
+
+        // リアルタイムプレビュー機能
+        function updatePreview() {
+            const markdownText = editor.value;
+            // MarkdownをHTMLに変換してプレビュー領域に挿入
+            preview.innerHTML = marked.parse(markdownText);
+        }
+
+        // 入力イベントリスナーの設定
+        editor.addEventListener('input', updatePreview);
+        
+        // サンプルテキストの定義と初期設定
+        const defaultSample = `# Markdown エディタへようこそ！
+
+ここはMarkdownをリアルタイムでプレビューできるエディタです。
+上部のツールバーから簡単にMarkdown記号を挿入できます。
+
+## 基本的な書式
+
+* **太字**
+* *斜体*
+* ~~取り消し線~~
+
+### リスト
+
+1. 番号付きリスト 1
+2. 番号付きリスト 2
+   - 入れ子のリスト
+   - アイテム
+
+### リンクと画像
+
+[Google](https://www.google.com)
+
+![プレースホルダー画像](https://placehold.co/150x100/e2e8f0/475569?text=Sample)
+
+### 引用
+
+> これは引用です。
+> 複数行にまたがることもできます。
+
+### コード
+
+インラインコード: \`console.log('Hello World!');\`
+
+コードブロック:
+\`\`\`javascript
+function greet(name) {
+  return \`Hello, \${name}!\`;
+}
+\`\`\`
+
+### テーブル
+
+| 左寄せ | 中央寄せ | 右寄せ |
+| :--- | :---: | ---: |
+| セル1 | セル2 | セル3 |
+| セル4 | セル5 | セル6 |
+
+### タスクリスト
+- [x] 完了したタスク
+- [ ] 未完了のタスク
+`;
+        
+        editor.value = defaultSample;
+
+        // 初期状態の表示
+        updatePreview();
+
+        // -----------------------------
+        // ツールバーの挿入機能
+        // -----------------------------
+        function insertMarkdown(type) {
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            let before = '';
+            let after = '';
+            let defaultText = '';
+            
+            switch(type) {
+                case 'bold': before = '**'; after = '**'; defaultText = '太字'; break;
+                case 'italic': before = '*'; after = '*'; defaultText = '斜体'; break;
+                case 'strike': before = '~~'; after = '~~'; defaultText = '打ち消し線'; break;
+                case 'heading': before = '# '; after = ''; defaultText = '見出し'; break;
+                case 'quote': before = '> '; after = ''; defaultText = '引用'; break;
+                case 'code': 
+                    if (selectedText.includes('\n') || !selectedText) {
+                        before = '\n```\n'; after = '\n```\n'; defaultText = 'code';
+                    } else {
+                        before = '`'; after = '`'; defaultText = 'code';
+                    }
+                    break;
+                case 'link': before = '['; after = '](url)'; defaultText = 'リンクテキスト'; break;
+                case 'image': before = '!['; after = '](image-url)'; defaultText = '代替テキスト'; break;
+                case 'ul': before = '- '; after = ''; defaultText = 'リストアイテム'; break;
+                case 'ol': before = '1. '; after = ''; defaultText = 'リストアイテム'; break;
+                case 'check': before = '- [ ] '; after = ''; defaultText = 'タスク'; break;
+                case 'hr': before = '\n---\n\n'; after = ''; break;
+                case 'table': before = '\n| 見出し | 見出し |\n| --- | --- |\n| セル | セル |\n'; after = ''; break;
+            }
+
+            const insertText = selectedText || defaultText;
+            const newText = before + insertText + after;
+            
+            // テキストの挿入
+            editor.setRangeText(newText, start, end, 'select');
+            
+            // カーソル位置の調整
+            if (!selectedText && defaultText) {
+                editor.selectionStart = start + before.length;
+                editor.selectionEnd = start + before.length + insertText.length;
+            } else if (!selectedText && !defaultText) {
+                editor.selectionStart = editor.selectionEnd = start + newText.length;
+            }
+            
+            editor.focus();
+            updatePreview();
+        }
+
+        // -----------------------------
+        // メニューの開閉機能
+        // -----------------------------
+        let isMenuOpen = false;
+
+        function toggleMenu() {
+            isMenuOpen = !isMenuOpen;
+            if (isMenuOpen) {
+                // 開く処理
+                overlay.classList.remove('hidden');
+                // 少し遅延させてopacityを変更しフェードインさせる
+                setTimeout(() => { overlay.classList.remove('opacity-0'); }, 10);
+                sidebar.classList.remove('translate-x-full');
+            } else {
+                // 閉じる処理
+                overlay.classList.add('opacity-0');
+                sidebar.classList.add('translate-x-full');
+                // トランジション終了後に非表示にする
+                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+            }
+        }
+
+        // -----------------------------
+        // アコーディオンの開閉機能
+        // -----------------------------
+        // 初期状態は開いておくように設定（画像に基づき）
+        let isAccordionOpen = true;
+        
+        // 初期状態で開いておく
+        if (isAccordionOpen) {
+            accordionContent.classList.add('open');
+            accordionArrow.classList.add('open');
+        }
+
+        function toggleAccordion() {
+            isAccordionOpen = !isAccordionOpen;
+            if (isAccordionOpen) {
+                accordionContent.classList.add('open');
+                accordionArrow.classList.add('open');
+            } else {
+                accordionContent.classList.remove('open');
+                accordionArrow.classList.remove('open');
+            }
+        }
+
+        // -----------------------------
+        // トースト通知機能 (alertの代わり)
+        // -----------------------------
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-green-600' : 'bg-red-600';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-circle-exclamation';
+
+            toast.className = `${bgColor} text-white px-4 py-3 rounded shadow-lg flex items-center gap-2 font-bold text-sm toast-animate absolute w-max`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> ${message}`;
+            
+            container.appendChild(toast);
+            
+            // アニメーション終了後に要素を削除
+            setTimeout(() => {
+                toast.remove();
+            }, 2500);
+        }
+
+        // -----------------------------
+        // HTMLコピー機能
+        // -----------------------------
+        function copyHtml() {
+            const markdownText = editor.value;
+            if (!markdownText.trim()) {
+                showToast("コピーする内容がありません", "error");
+                return;
+            }
+
+            const htmlContent = marked.parse(markdownText);
+
+            // クリップボードAPIを使用してコピー
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(htmlContent).then(() => {
+                    showToast("HTMLコードをコピーしました！");
+                }).catch(err => {
+                    console.error('Copy failed: ', err);
+                    fallbackCopyTextToClipboard(htmlContent);
+                });
+            } else {
+                fallbackCopyTextToClipboard(htmlContent);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            // 画面外に配置
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast("HTMLコードをコピーしました！");
+                } else {
+                    showToast("コピーに失敗しました", "error");
+                }
+            } catch (err) {
+                showToast("コピーに失敗しました", "error");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // -----------------------------
+        // HTML保存機能
+        // -----------------------------
+        function downloadHtml() {
+            const markdownText = editor.value;
+            if (!markdownText.trim()) {
+                showToast("保存する内容がありません", "error");
+                return;
+            }
+
+            const parsedHtml = marked.parse(markdownText);
+            
+            // 保存用の完全なHTMLドキュメントを作成
+            // Tailwind Typography風のスタイルをインラインで少し当てて見やすくします
+            const fullHtmlContent = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exported Document</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 2rem; max-width: 800px; margin: 0 auto; color: #333; }
+        h1, h2, h3 { border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; margin-top: 1.5em; }
+        code { background-color: #f6f8fa; padding: 0.2em 0.4em; border-radius: 3px; font-family: monospace; }
+        pre code { display: block; padding: 1em; overflow-x: auto; background-color: #f6f8fa; border-radius: 6px; }
+        blockquote { border-left: 4px solid #dfe2e5; color: #6a737d; padding: 0 1em; margin: 0; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+        table, th, td { border: 1px solid #dfe2e5; }
+        th, td { padding: 6px 13px; }
+        tr:nth-child(2n) { background-color: #f6f8fa; }
+        img { max-width: 100%; box-sizing: content-box; background-color: #fff; }
+    </style>
+</head>
+<body>
+${parsedHtml}
+</body>
+</html>`;
+
+            // Blobを作成してダウンロードリンクを生成
+            const blob = new Blob([fullHtmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'markdown-export.html'; // デフォルトのファイル名
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // 後処理
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+            
+            showToast("HTMLファイルを保存しました！");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字数カウント - 高機能テキスト解析・読了時間計算ツール</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans JP', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Scrollbar for better UI */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.8);
+        }
+
+        /* Accordion transition styles */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease-in-out, opacity 0.25s ease-in-out;
+            opacity: 0;
+        }
+        .accordion-content.open {
+            max-height: 600px;
+            opacity: 1;
+        }
+        .chevron-icon {
+            transition: transform 0.3s ease;
+        }
+        .chevron-icon.rotated {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-200 font-sans min-h-screen">
+
+    <!-- Header Navbar -->
+    <header class="bg-white/80 dark:bg-slate-800/80 backdrop-blur border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- App Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-brand-500 text-white rounded-xl shadow-md shadow-brand-500/20">
+                        <i class="fa-solid font-bold fa-pen-nib text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-brand-600 to-indigo-600 dark:from-sky-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                            文字数カウント
+                        </h1>
+                        <p class="hidden sm:block text-xs text-slate-500 dark:text-slate-400">リアルタイムテキスト解析 & 読了時間計算</p>
+                    </div>
+                </div>
+
+                <!-- Action Controls -->
+                <div class="flex items-center space-x-1.5 sm:space-x-3">
+                    <button id="sampleBtn" class="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 dark:hover:text-sky-400 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/50 transition">
+                        <i class="fa-solid fa-file-lines mr-1"></i><span class="hidden sm:inline">サンプル</span>
+                    </button>
+                    <button id="clearBtn" class="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-lg transition">
+                        <i class="fa-solid fa-trash-can mr-1"></i><span class="hidden sm:inline">消去</span>
+                    </button>
+                    <button id="copyBtn" class="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-lg shadow-sm transition flex items-center">
+                        <i class="fa-solid fa-copy mr-1"></i><span class="hidden sm:inline">コピー</span>
+                    </button>
+                    <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 my-auto mx-0.5"></div>
+                    <button id="themeToggle" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="テーマ切り替え">
+                        <i class="fa-solid fa-moon text-lg dark:hidden"></i>
+                        <i class="fa-solid fa-sun text-lg hidden dark:inline text-amber-400"></i>
+                    </button>
+
+                    <!-- Hamburger MENU Button -->
+                    <button id="menuOpenBtn" class="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 text-white dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <i class="fa-solid fa-bars text-base"></i>
+                        <span class="font-bold text-xs uppercase tracking-wider">MENU</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Off-Canvas Hamburger Menu Overlay -->
+    <div id="menuOverlay" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+    <!-- Off-Canvas Hamburger Menu Drawer -->
+    <aside id="menuDrawer" class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-slate-900 text-slate-100 z-50 transform translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col justify-between border-l border-slate-800">
+        
+        <!-- Drawer Top Header -->
+        <div>
+            <div class="p-4 flex items-center justify-between border-b border-slate-800/80">
+                <div class="flex items-center space-x-2 text-slate-200 font-bold text-lg">
+                    <i class="fa-solid fa-bars text-slate-400"></i>
+                    <span>メニュー</span>
+                </div>
+                <button id="menuCloseBtn" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition" aria-label="メニューを閉じる">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Drawer Scrollable Links Container -->
+            <div class="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
+                
+                <!-- Home Link -->
+                <a href="index.html" class="flex items-center space-x-3 px-4 py-3 bg-slate-800/90 hover:bg-slate-700/80 border border-slate-700/60 rounded-xl text-slate-100 font-semibold transition group shadow-sm">
+                    <i class="fa-solid fa-house text-lg text-sky-400 group-hover:scale-110 transition-transform"></i>
+                    <span>ホームページへ</span>
+                </a>
+
+                <!-- Collapsible Tools Section -->
+                <div class="border border-slate-800 rounded-xl bg-slate-950/40 overflow-hidden">
+                    <button id="accordionToggleBtn" class="w-full flex items-center justify-between px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-slate-200 font-semibold transition text-left">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid fa-flask text-emerald-400"></i>
+                            <span>便利ツール</span>
+                        </div>
+                        <i id="accordionChevron" class="fa-solid fa-chevron-down text-xs text-slate-400 chevron-icon rotated"></i>
+                    </button>
+
+                    <!-- Collapsible Links (Default Open, Excluding current page char-count.html) -->
+                    <div id="accordionContent" class="accordion-content open divide-y divide-slate-800/60 bg-slate-900/60">
+                        <a href="station-gacha.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            首都圏 ぶらり途中下車駅ガチャ
+                        </a>
+                        <a href="earthquake.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            リアルタイム地震情報
+                        </a>
+                        <a href="omikuji.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            おみくじ
+                        </a>
+                        <a href="timer.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            タイマー・ストップウォッチ
+                        </a>
+                        <a href="radix.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            進数変換
+                        </a>
+                        <a href="markdown.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            Markdownリアルタイムエディタ
+                        </a>
+                        <a href="qrcode.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            QRコード作成・読み取り器
+                        </a>
+                        <a href="time-bar.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            残り時間バー
+                        </a>
+                        <a href="password.html" class="flex items-center px-5 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition pl-10">
+                            パスワード生成
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Drawer Bottom Title Footer -->
+        <div class="p-4 border-t border-slate-800 text-center bg-slate-950/80">
+            <span class="text-sm font-semibold tracking-wide text-slate-300">さむさむ Official Website</span>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+        
+        <!-- Top Quick Metrics Bar -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">文字数 (スペース有)</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="statCharCount" class="text-2xl font-extrabold text-slate-900 dark:text-white">0</span>
+                    <span class="text-xs text-slate-400">文字</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">文字数 (スペース無)</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="statCharNoSpace" class="text-2xl font-extrabold text-brand-600 dark:text-sky-400">0</span>
+                    <span class="text-xs text-slate-400">文字</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">単語数</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="statWordCount" class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400">0</span>
+                    <span class="text-xs text-slate-400">語</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">原稿用紙 (400字詰)</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="statGenkoCount" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">0.0</span>
+                    <span class="text-xs text-slate-400">枚</span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">黙読時間 (目安)</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="statReadTime" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400">0</span>
+                    <span class="text-xs text-slate-400"></span>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm flex flex-col justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">音読・スピーチ</span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="statSpeakTime" class="text-2xl font-extrabold text-purple-600 dark:text-purple-400">0</span>
+                    <span class="text-xs text-slate-400"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dual Panel Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+            
+            <!-- Left Column: Editor & Input Controls (7 Cols on LG) -->
+            <div class="lg:col-span-7 flex flex-col gap-4">
+                
+                <!-- Target Goal Progress Bar -->
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                    <div class="flex items-center justify-between text-sm font-medium mb-2">
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-solid fa-bullseye text-brand-500"></i>
+                            <span>目標文字数進捗</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" id="targetInput" value="1000" min="100" step="100" class="w-20 px-2 py-0.5 text-xs text-right bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            <span class="text-slate-500 dark:text-slate-400 text-xs">文字</span>
+                            <span id="targetPercent" class="text-xs font-bold text-brand-600 dark:text-sky-400 ml-2">0%</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                        <div id="targetProgressBar" class="bg-gradient-to-r from-brand-500 to-indigo-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+                </div>
+
+                <!-- Text Area Box -->
+                <div class="relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm overflow-hidden flex flex-col flex-1 min-h-[420px]">
+                    <!-- Toolbar for Editor -->
+                    <div class="bg-slate-50 dark:bg-slate-800/80 px-4 py-2 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500">
+                        <div class="flex items-center space-x-3">
+                            <span id="autosaveStatus" class="flex items-center text-emerald-600 dark:text-emerald-400">
+                                <i class="fa-solid fa-cloud mr-1"></i> 自動保存完了
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span id="cursorPosition">行 1, 列 1</span>
+                        </div>
+                    </div>
+
+                    <!-- Textarea -->
+                    <textarea 
+                        id="mainTextArea" 
+                        placeholder="ここに文章を入力またはペーストしてください..." 
+                        class="w-full h-full p-4 flex-1 bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-y focus:outline-none font-sans text-base leading-relaxed min-h-[380px]"
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Analytics & Settings (5 Cols on LG) -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Detailed Reading Speed Settings Card -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center">
+                        <i class="fa-solid fa-sliders text-brand-500 mr-2"></i> 読書・発話速度設定
+                    </h3>
+                    
+                    <div class="space-y-4 text-xs">
+                        <!-- Silent Reading Speed Slider -->
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-600 dark:text-slate-400">黙読スピード (一般成人: 500〜800字/分)</span>
+                                <span id="silentSpeedValue" class="font-bold text-slate-800 dark:text-slate-200">600 字/分</span>
+                            </div>
+                            <input type="range" id="silentSpeedRange" min="200" max="1500" step="50" value="600" class="w-full accent-brand-500 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Speaking Speed Slider -->
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-slate-600 dark:text-slate-400">音読・スピーチ速度 (標準: 300〜400字/分)</span>
+                                <span id="speakSpeedValue" class="font-bold text-slate-800 dark:text-slate-200">350 字/分</span>
+                            </div>
+                            <input type="range" id="speakSpeedRange" min="100" max="800" step="25" value="350" class="w-full accent-purple-500 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Composition Breakdown Card -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center">
+                        <i class="fa-solid fa-chart-pie text-brand-500 mr-2"></i> 文字種割合・構成分析
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                        <!-- Doughnut Chart Canvas -->
+                        <div class="relative w-36 h-36 mx-auto">
+                            <canvas id="charTypeChart"></canvas>
+                        </div>
+
+                        <!-- Breakdown Legend / Details -->
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span>ひらがな</span>
+                                <span id="countHiragana" class="font-mono font-bold">0 (0%)</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-sky-500 mr-2"></span>カタカナ</span>
+                                <span id="countKatakana" class="font-mono font-bold">0 (0%)</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-2"></span>漢字</span>
+                                <span id="countKanji" class="font-mono font-bold">0 (0%)</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span>英数字</span>
+                                <span id="countAlphanumeric" class="font-mono font-bold">0 (0%)</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2"></span>記号・その他</span>
+                                <span id="countOther" class="font-mono font-bold">0 (0%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Statistics Grid -->
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center">
+                        <i class="fa-solid fa-list-check text-brand-500 mr-2"></i> 詳細構造データ
+                    </h3>
+
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-700/40 rounded-lg">
+                            <div class="text-slate-500 dark:text-slate-400">総行数</div>
+                            <div id="statLineCount" class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5">0</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-700/40 rounded-lg">
+                            <div class="text-slate-500 dark:text-slate-400">段落数</div>
+                            <div id="statParagraphCount" class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5">0</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-700/40 rounded-lg">
+                            <div class="text-slate-500 dark:text-slate-400">データサイズ (UTF-8)</div>
+                            <div id="statByteSize" class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5">0 B</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-700/40 rounded-lg">
+                            <div class="text-slate-500 dark:text-slate-400">最長行文字数</div>
+                            <div id="statMaxLineLength" class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5">0</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Page Footer -->
+    <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+        <p>© 2026 さむさむ All rights reserved.</p>
+    </footer>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Menu Drawer Controls Logic
+            const menuOpenBtn = document.getElementById('menuOpenBtn');
+            const menuCloseBtn = document.getElementById('menuCloseBtn');
+            const menuOverlay = document.getElementById('menuOverlay');
+            const menuDrawer = document.getElementById('menuDrawer');
+            const accordionToggleBtn = document.getElementById('accordionToggleBtn');
+            const accordionContent = document.getElementById('accordionContent');
+            const accordionChevron = document.getElementById('accordionChevron');
+
+            const openMenu = () => {
+                menuOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                menuOverlay.classList.add('opacity-100');
+                menuDrawer.classList.remove('translate-x-full');
+            };
+
+            const closeMenu = () => {
+                menuOverlay.classList.remove('opacity-100');
+                menuOverlay.classList.add('opacity-0', 'pointer-events-none');
+                menuDrawer.classList.add('translate-x-full');
+            };
+
+            menuOpenBtn.addEventListener('click', openMenu);
+            menuCloseBtn.addEventListener('click', closeMenu);
+            menuOverlay.addEventListener('click', closeMenu);
+
+            // Collapsible Accordion Toggle
+            accordionToggleBtn.addEventListener('click', () => {
+                accordionContent.classList.toggle('open');
+                accordionChevron.classList.toggle('rotated');
+            });
+
+            // DOM Element References for Text Metric Pro
+            const mainTextArea = document.getElementById('mainTextArea');
+            const sampleBtn = document.getElementById('sampleBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            // Stats Elements
+            const statCharCount = document.getElementById('statCharCount');
+            const statCharNoSpace = document.getElementById('statCharNoSpace');
+            const statWordCount = document.getElementById('statWordCount');
+            const statGenkoCount = document.getElementById('statGenkoCount');
+            const statReadTime = document.getElementById('statReadTime');
+            const statSpeakTime = document.getElementById('statSpeakTime');
+            
+            // Detailed Stats Elements
+            const statLineCount = document.getElementById('statLineCount');
+            const statParagraphCount = document.getElementById('statParagraphCount');
+            const statByteSize = document.getElementById('statByteSize');
+            const statMaxLineLength = document.getElementById('statMaxLineLength');
+
+            // Goal Progress Elements
+            const targetInput = document.getElementById('targetInput');
+            const targetPercent = document.getElementById('targetPercent');
+            const targetProgressBar = document.getElementById('targetProgressBar');
+
+            // Speed Sliders
+            const silentSpeedRange = document.getElementById('silentSpeedRange');
+            const silentSpeedValue = document.getElementById('silentSpeedValue');
+            const speakSpeedRange = document.getElementById('speakSpeedRange');
+            const speakSpeedValue = document.getElementById('speakSpeedValue');
+
+            // Character Types Breakdown
+            const countHiragana = document.getElementById('countHiragana');
+            const countKatakana = document.getElementById('countKatakana');
+            const countKanji = document.getElementById('countKanji');
+            const countAlphanumeric = document.getElementById('countAlphanumeric');
+            const countOther = document.getElementById('countOther');
+
+            // Status Elements
+            const cursorPosition = document.getElementById('cursorPosition');
+
+            // LocalStorage Keys
+            const STORAGE_KEY_TEXT = 'text_metrics_pro_content';
+            const STORAGE_KEY_THEME = 'text_metrics_pro_theme';
+
+            // Sample Text Definition
+            const SAMPLE_TEXT = `【吾輩は猫である】
+吾輩（わがはい）は猫である。名前はまだ無い。
+どこで生れたかとんと見当（けんとう）がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。吾輩はここで始めて人間というものを見た。しかもあとで聞くとそれは書生という人間中で一番獰悪（どうあく）な種族であったそうだ。この書生というのは時々我々を捕（つか）まえて煮（に）て食うという話である。しかしその当時は何という考もなかったから別段恐ろしいとも思わなかった。
+
+文字数カウントへようこそ！
+日本語・英語を問わずリアルタイムで文字数・単語数・推定読了時間を正確に計算します。
+原稿執筆、ブログ記事作成、スピーチ原稿作成、レポート提出時の文字数チェックなどにぜひご活用ください！`;
+
+            // Initialize Chart.js Doughnut Chart
+            const ctx = document.getElementById('charTypeChart').getContext('2d');
+            let charChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['ひらがな', 'カタカナ', '漢字', '英数字', '記号・他'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#10b981', // Emerald
+                            '#0284c7', // Sky
+                            '#6366f1', // Indigo
+                            '#f59e0b', // Amber
+                            '#94a3b8'  // Slate
+                        ],
+                        borderWidth: 2,
+                        borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.raw} 文字`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            // Theme Management
+            const initTheme = () => {
+                const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                updateChartColors();
+            };
+
+            const toggleTheme = () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem(STORAGE_KEY_THEME, isDark ? 'dark' : 'light');
+                updateChartColors();
+            };
+
+            const updateChartColors = () => {
+                if (charChart) {
+                    const isDark = document.documentElement.classList.contains('dark');
+                    charChart.data.datasets[0].borderColor = isDark ? '#1e293b' : '#ffffff';
+                    charChart.update();
+                }
+            };
+
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // Toast Notification Handler
+            const showToast = (message, type = 'info') => {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `pointer-events-auto flex items-center px-4 py-3 rounded-lg shadow-lg text-sm text-white transform transition-all duration-300 translate-y-2 opacity-0 ${
+                    type === 'success' ? 'bg-emerald-600' :
+                    type === 'error' ? 'bg-rose-600' : 'bg-slate-800'
+                }`;
+                
+                const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+                toast.innerHTML = `<i class="fa-solid ${icon} mr-2 text-base"></i><span>${message}</span>`;
+                
+                container.appendChild(toast);
+
+                // Animate In
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                }, 10);
+
+                // Animate Out & Remove
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            };
+
+            // Calculation Utilities
+            const getUtf8Bytes = (str) => {
+                return new Blob([str]).size;
+            };
+
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            };
+
+            const countWords = (text) => {
+                if (!text.trim()) return 0;
+                const englishWords = text.match(/[a-zA-Z0-9_\u00C0-\u024F]+/g) || [];
+                let nonEnglishText = text.replace(/[a-zA-Z0-9_\u00C0-\u024F]+/g, ' ').trim();
+                const cjkChars = nonEnglishText.match(/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]/g) || [];
+                return englishWords.length + cjkChars.length;
+            };
+
+            const calculateTime = (charCount, charsPerMinute) => {
+                if (charCount === 0 || charsPerMinute === 0) return '0';
+                const totalMinutes = charCount / charsPerMinute;
+                const minutes = Math.floor(totalMinutes);
+                const seconds = Math.round((totalMinutes - minutes) * 60);
+
+                if (minutes === 0) {
+                    return `${seconds}秒`;
+                } else if (seconds === 0) {
+                    return `${minutes}分`;
+                } else {
+                    return `${minutes}分${seconds}秒`;
+                }
+            };
+
+            // Main Text Analysis Function
+            const updateMetrics = () => {
+                const text = mainTextArea.value;
+
+                // Character Counts
+                const charCount = text.length;
+                const charNoSpace = text.replace(/\s/g, '').length;
+                
+                statCharCount.textContent = charCount.toLocaleString();
+                statCharNoSpace.textContent = charNoSpace.toLocaleString();
+
+                // Word Count & Genko-yoshi
+                const words = countWords(text);
+                statWordCount.textContent = words.toLocaleString();
+
+                const genkoPages = (charNoSpace / 400).toFixed(1);
+                statGenkoCount.textContent = genkoPages;
+
+                // Reading & Speaking Time
+                const silentCPM = parseInt(silentSpeedRange.value, 10);
+                const speakCPM = parseInt(speakSpeedRange.value, 10);
+
+                statReadTime.textContent = calculateTime(charNoSpace, silentCPM);
+                statSpeakTime.textContent = calculateTime(charNoSpace, speakCPM);
+
+                // Goal Progress Bar
+                const targetVal = parseInt(targetInput.value, 10) || 1000;
+                const percent = Math.min(Math.round((charNoSpace / targetVal) * 100), 100);
+                targetPercent.textContent = `${percent}%`;
+                targetProgressBar.style.width = `${percent}%`;
+
+                if (charNoSpace >= targetVal && targetVal > 0) {
+                    targetProgressBar.classList.remove('from-brand-500', 'to-indigo-500');
+                    targetProgressBar.classList.add('from-emerald-500', 'to-teal-500');
+                } else {
+                    targetProgressBar.classList.remove('from-emerald-500', 'to-teal-500');
+                    targetProgressBar.classList.add('from-brand-500', 'to-indigo-500');
+                }
+
+                // Line & Structure Stats
+                const lines = text.split('\n');
+                const lineCount = text.length > 0 ? lines.length : 0;
+                const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0).length;
+                const bytes = getUtf8Bytes(text);
+                
+                let maxLineLen = 0;
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].length > maxLineLen) {
+                        maxLineLen = lines[i].length;
+                    }
+                }
+
+                statLineCount.textContent = lineCount.toLocaleString();
+                statParagraphCount.textContent = paragraphs.toLocaleString();
+                statByteSize.textContent = formatBytes(bytes);
+                statMaxLineLength.textContent = maxLineLen.toLocaleString();
+
+                // Character Type Classification
+                const hiraganaCount = (text.match(/[\u3040-\u309F]/g) || []).length;
+                const katakanaCount = (text.match(/[\u30A0-\u30FF]/g) || []).length;
+                const kanjiCount = (text.match(/[\u4E00-\u9FFF\u3400-\u4DBF]/g) || []).length;
+                const alphaNumCount = (text.match(/[a-zA-Z0-9]/g) || []).length;
+                const otherCount = charCount - (hiraganaCount + katakanaCount + kanjiCount + alphaNumCount);
+
+                const getPercent = (count) => charCount > 0 ? ((count / charCount) * 100).toFixed(1) : '0';
+
+                countHiragana.textContent = `${hiraganaCount} (${getPercent(hiraganaCount)}%)`;
+                countKatakana.textContent = `${katakanaCount} (${getPercent(katakanaCount)}%)`;
+                countKanji.textContent = `${kanjiCount} (${getPercent(kanjiCount)}%)`;
+                countAlphanumeric.textContent = `${alphaNumCount} (${getPercent(alphaNumCount)}%)`;
+                countOther.textContent = `${otherCount} (${getPercent(otherCount)}%)`;
+
+                // Update Chart.js Data
+                charChart.data.datasets[0].data = [
+                    hiraganaCount,
+                    katakanaCount,
+                    kanjiCount,
+                    alphaNumCount,
+                    otherCount
+                ];
+                charChart.update();
+
+                // Auto-save content to LocalStorage
+                localStorage.setItem(STORAGE_KEY_TEXT, text);
+            };
+
+            // Cursor Position Tracking
+            const updateCursorPos = () => {
+                const text = mainTextArea.value;
+                const selStart = mainTextArea.selectionStart;
+                const lines = text.substring(0, selStart).split('\n');
+                const lineNum = lines.length;
+                const colNum = lines[lines.length - 1].length + 1;
+
+                cursorPosition.textContent = `行 ${lineNum}, 列 ${colNum}`;
+            };
+
+            // Event Listeners Registration
+            mainTextArea.addEventListener('input', () => {
+                updateMetrics();
+                updateCursorPos();
+            });
+
+            mainTextArea.addEventListener('click', updateCursorPos);
+            mainTextArea.addEventListener('keyup', updateCursorPos);
+
+            silentSpeedRange.addEventListener('input', (e) => {
+                silentSpeedValue.textContent = `${e.target.value} 字/分`;
+                updateMetrics();
+            });
+
+            speakSpeedRange.addEventListener('input', (e) => {
+                speakSpeedValue.textContent = `${e.target.value} 字/分`;
+                updateMetrics();
+            });
+
+            targetInput.addEventListener('input', updateMetrics);
+
+            // Action Buttons Handlers
+            sampleBtn.addEventListener('click', () => {
+                mainTextArea.value = SAMPLE_TEXT;
+                updateMetrics();
+                updateCursorPos();
+                showToast('サンプルテキストを読み込みました', 'info');
+            });
+
+            clearBtn.addEventListener('click', () => {
+                if (mainTextArea.value.trim() === '') return;
+                mainTextArea.value = '';
+                updateMetrics();
+                updateCursorPos();
+                showToast('テキストをクリアしました', 'info');
+            });
+
+            copyBtn.addEventListener('click', () => {
+                if (!mainTextArea.value) {
+                    showToast('コピーするテキストがありません', 'error');
+                    return;
+                }
+
+                mainTextArea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('クリップボードにコピーしました！', 'success');
+                } catch (err) {
+                    showToast('コピーに失敗しました', 'error');
+                }
+                window.getSelection().removeAllRanges();
+            });
+
+            // Initial Load Setup
+            initTheme();
+
+            const savedText = localStorage.getItem(STORAGE_KEY_TEXT);
+            if (savedText) {
+                mainTextArea.value = savedText;
+            } else {
+                mainTextArea.value = SAMPLE_TEXT;
+            }
+
+            updateMetrics();
+            updateCursorPos();
+
+        });
+    </script>
+</body>
+</html>

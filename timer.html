@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タイマー ＆ ストップウォッチ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { sans: ['Inter', 'Noto Sans JP', 'sans-serif'] } } }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .glass-card { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-sky-500 selection:text-white">
+
+  <!-- Sticky Header -->
+  <header class="sticky top-0 z-40 w-full bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 transition-all duration-200">
+    <div class="max-w-7xl mx-auto px-4 py-3.5 md:px-6 lg:px-8 flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">⏱️</span>
+        <h1 class="text-lg md:text-xl font-bold text-slate-100">タイマー ＆ ストップウォッチ</h1>
+      </div>
+
+      <!-- Hamburger Menu Toggle Button -->
+      <button onclick="openMenu()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl border border-slate-700 transition font-bold text-sm shadow-md active:scale-95">
+        <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        <span>MENU</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Drawer Backdrop -->
+  <div id="menu-overlay" onclick="closeMenu()" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+  <!-- Navigation Drawer Content -->
+  <aside id="menu-drawer" class="fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] bg-[#0c1322] border-l border-slate-800/80 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col justify-between shadow-2xl">
+    
+    <!-- Upper Section -->
+    <div class="p-4 sm:p-5 flex-1 overflow-y-auto">
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
+        <div class="flex items-center gap-2.5 text-slate-100 font-bold text-base">
+          <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          <span>メニュー</span>
+        </div>
+        <button onclick="closeMenu()" class="text-slate-400 hover:text-white p-1 rounded-lg transition" aria-label="閉じる">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Home Button -->
+      <a href="index.html" class="flex items-center gap-3 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-100 font-bold px-4 py-3.5 rounded-2xl transition mb-4 group">
+        <svg class="w-5 h-5 text-sky-400 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+        </svg>
+        <span>ホームページへ</span>
+      </a>
+
+      <!-- Accordion: Useful Tools -->
+      <div class="border border-slate-800 rounded-2xl overflow-hidden bg-slate-900/50">
+        <button onclick="toggleToolsAccordion()" class="w-full flex items-center justify-between p-4 text-left font-bold text-slate-200 hover:bg-slate-800/50 transition">
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.605 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+            </svg>
+            <span>便利ツール</span>
+          </div>
+          <svg id="accordion-arrow" class="w-4 h-4 text-slate-400 transition-transform duration-300 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+
+        <!-- Tool Item List (Excluding current page: timer.html) -->
+        <div id="tools-accordion-content" class="transition-all duration-300 ease-in-out overflow-hidden border-t border-slate-800/80 bg-slate-950/40 divide-y divide-slate-800/50">
+          <a href="char-count.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">文字数カウント</a>
+          <a href="station-gacha.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">首都圏 ぶらり途中下車駅ガチャ</a>
+          <a href="earthquake.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">リアルタイム地震情報</a>
+          <a href="omikuji.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">おみくじ</a>
+          <a href="radix.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">進数変換</a>
+          <a href="markdown.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">Markdownリアルタイムエディタ</a>
+          <a href="qrcode.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">QRコード作成・読み取り器</a>
+          <a href="time-bar.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">残り時間バー</a>
+          <a href="password.html" class="block px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/40 transition">パスワード生成</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Bottom Branding Footer -->
+    <div class="p-4 bg-slate-950/80 border-t border-slate-800/80 text-center">
+      <span class="text-sm font-bold text-slate-200 tracking-wide">さむさむ Official Website</span>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex-grow">
+    <section class="space-y-6">
+      <div class="glass-card rounded-3xl p-6 md:p-8 border border-slate-800">
+        
+        <!-- Separate Mode Switcher Buttons -->
+        <div class="flex justify-center mb-8">
+          <div class="bg-slate-900 p-1.5 rounded-2xl border border-slate-800 flex gap-2">
+            <button onclick="toggleTimerSub('timer')" id="btn-mode-timer" class="px-6 py-2.5 rounded-xl font-bold text-sm transition bg-sky-500 text-white shadow-md">
+              ⏳ タイマー
+            </button>
+            <button onclick="toggleTimerSub('stopwatch')" id="btn-mode-stopwatch" class="px-6 py-2.5 rounded-xl font-bold text-sm transition text-slate-400 hover:text-white">
+              ⏱️ ストップウォッチ
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center max-w-5xl mx-auto">
+          <!-- Canvas: Clock & Stopwatch Radial Gauge -->
+          <div class="flex flex-col items-center justify-center bg-slate-900/90 rounded-2xl p-6 border border-slate-800 shadow-inner min-h-[360px]">
+            <canvas id="canvas-clock" width="320" height="320" class="max-w-full h-auto"></canvas>
+          </div>
+
+          <!-- Controls Container -->
+          <div class="space-y-6">
+            <!-- TIMER VIEW -->
+            <div id="sub-timer-view" class="space-y-6">
+              <h3 class="text-xl font-bold text-slate-100 flex items-center justify-between">
+                <span>タイマー設定</span>
+                <span id="timer-status-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">停止中</span>
+              </h3>
+              
+              <!-- Input fields with real-time update listeners -->
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">時間</label>
+                  <input type="number" id="timer-hours" min="0" max="99" value="0" oninput="onTimerInputChanged()" class="timer-input w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-center font-mono text-lg text-white focus:outline-none focus:border-sky-500 disabled:opacity-40 disabled:cursor-not-allowed">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">分</label>
+                  <input type="number" id="timer-minutes" min="0" max="59" value="3" oninput="onTimerInputChanged()" class="timer-input w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-center font-mono text-lg text-white focus:outline-none focus:border-sky-500 disabled:opacity-40 disabled:cursor-not-allowed">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-400 mb-1">秒</label>
+                  <input type="number" id="timer-seconds" min="0" max="59" value="0" oninput="onTimerInputChanged()" class="timer-input w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-center font-mono text-lg text-white focus:outline-none focus:border-sky-500 disabled:opacity-40 disabled:cursor-not-allowed">
+                </div>
+              </div>
+
+              <!-- Quick Presets -->
+              <div class="flex flex-wrap gap-2">
+                <button onclick="addTimerSeconds(10)" class="btn-quick-add px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 rounded-lg border border-slate-700 transition">+10秒</button>
+                <button onclick="addTimerSeconds(60)" class="btn-quick-add px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 rounded-lg border border-slate-700 transition">+1分</button>
+                <button onclick="addTimerSeconds(300)" class="btn-quick-add px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 rounded-lg border border-slate-700 transition">+5分</button>
+                <button onclick="addTimerSeconds(600)" class="btn-quick-add px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold text-slate-300 rounded-lg border border-slate-700 transition">+10分</button>
+              </div>
+
+              <!-- Control Buttons -->
+              <div class="flex gap-3 pt-2">
+                <button onclick="startTimer()" id="btn-timer-start" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition">
+                  スタート
+                </button>
+                <button onclick="pauseTimer()" id="btn-timer-pause" disabled class="flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/20 disabled:opacity-40 transition">
+                  一時停止
+                </button>
+                <button onclick="resetTimer()" class="py-3 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl border border-slate-700 transition">
+                  リセット
+                </button>
+              </div>
+            </div>
+
+            <!-- STOPWATCH VIEW -->
+            <div id="sub-stopwatch-view" class="space-y-6 hidden">
+              <h3 class="text-xl font-bold text-slate-100">ストップウォッチ</h3>
+
+              <!-- Control Buttons -->
+              <div class="flex gap-3">
+                <button onclick="startStopwatch()" id="btn-sw-start" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition">
+                  スタート
+                </button>
+                <button onclick="lapStopwatch()" id="btn-sw-lap" disabled class="flex-1 py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow-lg shadow-sky-600/20 disabled:opacity-40 transition">
+                  ラップ
+                </button>
+                <button onclick="resetStopwatch()" class="py-3 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl border border-slate-700 transition">
+                  リセット
+                </button>
+              </div>
+
+              <!-- Lap Records Table -->
+              <div class="bg-slate-900/80 rounded-xl p-3 border border-slate-800 max-h-48 overflow-y-auto">
+                <div class="text-xs font-semibold text-slate-400 mb-2 px-2 flex justify-between">
+                  <span>ラップ #</span>
+                  <span>タイム</span>
+                </div>
+                <ul id="sw-lap-list" class="space-y-1 font-mono text-xs text-slate-300">
+                  <li class="text-center text-slate-500 py-3">ラップタイム記録はありません</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Popup -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-sky-600 text-white px-5 py-3 rounded-2xl shadow-2xl font-medium text-sm flex items-center gap-2">
+    <svg class="w-5 h-5 text-sky-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toast-msg">通知</span>
+  </div>
+
+  <!-- Main Page Footer -->
+  <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400">
+    &copy; 2026 さむさむ All rights reserved.
+  </footer>
+
+  <!-- JS Implementation -->
+  <script>
+    // Drawer Menu Logic
+    function openMenu() {
+      const overlay = document.getElementById('menu-overlay');
+      const drawer = document.getElementById('menu-drawer');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      drawer.classList.remove('translate-x-full');
+    }
+
+    function closeMenu() {
+      const overlay = document.getElementById('menu-overlay');
+      const drawer = document.getElementById('menu-drawer');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      drawer.classList.add('translate-x-full');
+    }
+
+    // Tools Accordion Toggle Logic
+    let isToolsOpen = true;
+    function toggleToolsAccordion() {
+      const content = document.getElementById('tools-accordion-content');
+      const arrow = document.getElementById('accordion-arrow');
+      
+      if (isToolsOpen) {
+        content.style.maxHeight = '0px';
+        arrow.classList.remove('rotate-180');
+        isToolsOpen = false;
+      } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+        arrow.classList.add('rotate-180');
+        isToolsOpen = true;
+      }
+    }
+
+    // Timer & Stopwatch Logic
+    const canvasClock = document.getElementById('canvas-clock');
+    const ctxClock = canvasClock.getContext('2d');
+
+    let activeTimerMode = 'timer'; // 'timer' | 'stopwatch'
+    
+    // Timer Variables
+    let timerTotalSeconds = 180;
+    let timerRemainingSeconds = 180;
+    let timerInterval = null;
+    let isTimerRunning = false;
+    let isTimerPaused = false;
+
+    // Stopwatch Variables
+    let swStartTime = 0;
+    let swElapsedTime = 0;
+    let swInterval = null;
+    let isSwRunning = false;
+    let swLaps = [];
+
+    function showToast(text) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = text;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    function toggleTimerSub(mode) {
+      activeTimerMode = mode;
+      document.getElementById('sub-timer-view').classList.toggle('hidden', mode !== 'timer');
+      document.getElementById('sub-stopwatch-view').classList.toggle('hidden', mode !== 'stopwatch');
+
+      const btnTimer = document.getElementById('btn-mode-timer');
+      const btnSw = document.getElementById('btn-mode-stopwatch');
+
+      if (mode === 'timer') {
+        btnTimer.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition bg-sky-500 text-white shadow-md";
+        btnSw.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition text-slate-400 hover:text-white";
+      } else {
+        btnSw.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition bg-sky-500 text-white shadow-md";
+        btnTimer.className = "px-6 py-2.5 rounded-xl font-bold text-sm transition text-slate-400 hover:text-white";
+      }
+      drawClockCanvas();
+    }
+
+    function setTimerInputsDisabled(disabled) {
+      document.getElementById('timer-hours').disabled = disabled;
+      document.getElementById('timer-minutes').disabled = disabled;
+      document.getElementById('timer-seconds').disabled = disabled;
+
+      document.querySelectorAll('.btn-quick-add').forEach(btn => {
+        btn.disabled = disabled;
+      });
+    }
+
+    function onTimerInputChanged() {
+      if (isTimerRunning || isTimerPaused) return;
+
+      const h = parseInt(document.getElementById('timer-hours').value) || 0;
+      const m = parseInt(document.getElementById('timer-minutes').value) || 0;
+      const s = parseInt(document.getElementById('timer-seconds').value) || 0;
+
+      timerTotalSeconds = h * 3600 + m * 60 + s;
+      timerRemainingSeconds = timerTotalSeconds;
+      drawClockCanvas();
+    }
+
+    function addTimerSeconds(sec) {
+      if (isTimerRunning || isTimerPaused) return;
+
+      const h = parseInt(document.getElementById('timer-hours').value) || 0;
+      const m = parseInt(document.getElementById('timer-minutes').value) || 0;
+      const s = parseInt(document.getElementById('timer-seconds').value) || 0;
+
+      let currentTotal = h * 3600 + m * 60 + s + sec;
+      
+      document.getElementById('timer-hours').value = Math.floor(currentTotal / 3600);
+      document.getElementById('timer-minutes').value = Math.floor((currentTotal % 3600) / 60);
+      document.getElementById('timer-seconds').value = currentTotal % 60;
+      
+      onTimerInputChanged();
+    }
+
+    function drawClockCanvas() {
+      const w = canvasClock.width;
+      const h = canvasClock.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = 120;
+
+      ctxClock.clearRect(0, 0, w, h);
+
+      ctxClock.save();
+      ctxClock.translate(cx, cy);
+      ctxClock.beginPath();
+      ctxClock.arc(0, 0, radius, 0, Math.PI * 2);
+      ctxClock.strokeStyle = '#1e293b';
+      ctxClock.lineWidth = 16;
+      ctxClock.stroke();
+
+      if (activeTimerMode === 'timer') {
+        const pct = timerTotalSeconds > 0 ? timerRemainingSeconds / timerTotalSeconds : 0;
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + (Math.PI * 2 * pct);
+
+        ctxClock.beginPath();
+        ctxClock.arc(0, 0, radius, startAngle, endAngle);
+        ctxClock.strokeStyle = '#38bdf8';
+        ctxClock.lineWidth = 16;
+        ctxClock.lineCap = 'round';
+        ctxClock.stroke();
+
+        const hVal = Math.floor(timerRemainingSeconds / 3600);
+        const mVal = Math.floor((timerRemainingSeconds % 3600) / 60);
+        const sVal = timerRemainingSeconds % 60;
+
+        const timeStr = hVal > 0 
+          ? `${String(hVal).padStart(2, '0')}:${String(mVal).padStart(2, '0')}:${String(sVal).padStart(2, '0')}`
+          : `${String(mVal).padStart(2, '0')}:${String(sVal).padStart(2, '0')}`;
+
+        ctxClock.fillStyle = '#f8fafc';
+        ctxClock.font = 'bold 36px "Inter", sans-serif';
+        ctxClock.textAlign = 'center';
+        ctxClock.textBaseline = 'middle';
+        ctxClock.fillText(timeStr, 0, 0);
+
+        ctxClock.font = '12px "Noto Sans JP", sans-serif';
+        ctxClock.fillStyle = '#94a3b8';
+        ctxClock.fillText('タイマー', 0, 45);
+
+      } else {
+        const seconds = (swElapsedTime / 1000) % 60;
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + (Math.PI * 2 * (seconds / 60));
+
+        ctxClock.beginPath();
+        ctxClock.arc(0, 0, radius, startAngle, endAngle);
+        ctxClock.strokeStyle = '#10b981';
+        ctxClock.lineWidth = 16;
+        ctxClock.lineCap = 'round';
+        ctxClock.stroke();
+
+        const ms = Math.floor((swElapsedTime % 1000) / 10);
+        const totalSec = Math.floor(swElapsedTime / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+
+        const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+
+        ctxClock.fillStyle = '#f8fafc';
+        ctxClock.font = 'bold 34px "Inter", sans-serif';
+        ctxClock.textAlign = 'center';
+        ctxClock.textBaseline = 'middle';
+        ctxClock.fillText(timeStr, 0, 0);
+
+        ctxClock.font = '12px "Noto Sans JP", sans-serif';
+        ctxClock.fillStyle = '#94a3b8';
+        ctxClock.fillText('ストップウォッチ', 0, 45);
+      }
+
+      ctxClock.restore();
+    }
+
+    function startTimer() {
+      if (isTimerRunning) return;
+
+      if (!isTimerPaused) {
+        onTimerInputChanged();
+      }
+
+      if (timerRemainingSeconds <= 0) return;
+
+      isTimerRunning = true;
+      isTimerPaused = false;
+
+      setTimerInputsDisabled(true);
+
+      document.getElementById('btn-timer-start').disabled = true;
+      document.getElementById('btn-timer-pause').disabled = false;
+      document.getElementById('timer-status-badge').innerText = "計測中";
+      document.getElementById('timer-status-badge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+
+      timerInterval = setInterval(() => {
+        timerRemainingSeconds--;
+        drawClockCanvas();
+
+        if (timerRemainingSeconds <= 0) {
+          clearInterval(timerInterval);
+          isTimerRunning = false;
+          isTimerPaused = false;
+
+          setTimerInputsDisabled(false);
+
+          document.getElementById('btn-timer-start').disabled = false;
+          document.getElementById('btn-timer-pause').disabled = true;
+          document.getElementById('timer-status-badge').innerText = "時間切れ";
+          document.getElementById('timer-status-badge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30";
+          
+          showToast("⏱️ タイマーの時間になりました！");
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      if (!isTimerRunning) return;
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      isTimerPaused = true;
+
+      setTimerInputsDisabled(true);
+
+      document.getElementById('btn-timer-start').disabled = false;
+      document.getElementById('btn-timer-pause').disabled = true;
+      document.getElementById('timer-status-badge').innerText = "一時停止";
+      document.getElementById('timer-status-badge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30";
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      isTimerPaused = false;
+
+      setTimerInputsDisabled(false);
+
+      document.getElementById('btn-timer-start').disabled = false;
+      document.getElementById('btn-timer-pause').disabled = true;
+      document.getElementById('timer-status-badge').innerText = "停止中";
+      document.getElementById('timer-status-badge').className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700";
+
+      onTimerInputChanged();
+    }
+
+    function startStopwatch() {
+      if (isSwRunning) {
+        clearInterval(swInterval);
+        isSwRunning = false;
+        document.getElementById('btn-sw-start').innerText = '再開';
+        document.getElementById('btn-sw-start').className = "flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition";
+        document.getElementById('btn-sw-lap').disabled = true;
+      } else {
+        isSwRunning = true;
+        swStartTime = Date.now() - swElapsedTime;
+        document.getElementById('btn-sw-start').innerText = '一時停止';
+        document.getElementById('btn-sw-start').className = "flex-1 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-lg shadow-amber-600/20 transition";
+        document.getElementById('btn-sw-lap').disabled = false;
+
+        swInterval = setInterval(() => {
+          swElapsedTime = Date.now() - swStartTime;
+          drawClockCanvas();
+        }, 30);
+      }
+    }
+
+    function lapStopwatch() {
+      if (!isSwRunning) return;
+      const ms = Math.floor((swElapsedTime % 1000) / 10);
+      const totalSec = Math.floor(swElapsedTime / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      const timeFormatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+
+      swLaps.unshift(timeFormatted);
+
+      const list = document.getElementById('sw-lap-list');
+      list.innerHTML = swLaps.map((lap, idx) => `
+        <li class="py-1.5 px-2 bg-slate-800/50 rounded-lg flex justify-between border border-slate-700/40">
+          <span class="text-slate-400">Lap ${swLaps.length - idx}</span>
+          <span class="font-bold text-sky-400">${lap}</span>
+        </li>
+      `).join('');
+    }
+
+    function resetStopwatch() {
+      clearInterval(swInterval);
+      isSwRunning = false;
+      swElapsedTime = 0;
+      swLaps = [];
+      document.getElementById('btn-sw-start').innerText = 'スタート';
+      document.getElementById('btn-sw-start').className = "flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition";
+      document.getElementById('btn-sw-lap').disabled = true;
+      document.getElementById('sw-lap-list').innerHTML = '<li class="text-center text-slate-500 py-3">ラップタイム記録はありません</li>';
+      drawClockCanvas();
+    }
+
+    window.onload = function() {
+      onTimerInputChanged();
+      // Initialize accordion height for initial state
+      const content = document.getElementById('tools-accordion-content');
+      if (content) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+      }
+    };
+  </script>
+</body>
+</html>
